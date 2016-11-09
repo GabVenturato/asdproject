@@ -1,0 +1,20 @@
+digraph graph9 {
+h -> a;
+k -> a;
+b;
+g -> a;
+f -> e;
+a -> k;
+g -> h;
+a -> e;
+l -> a;
+j -> f;
+f -> k;
+c -> g;
+f -> c;
+e -> d;
+k -> h;
+l -> f;
+j -> h;
+j -> i;
+}

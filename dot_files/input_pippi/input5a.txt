@@ -1,0 +1,16 @@
+digraph G1 {
+a -> b;
+b -> c;
+b -> dav;
+dav -> e;
+i -> h;
+h -> ipi;
+ipi -> f;
+h -> g;
+g -> h;
+f -> e;
+l -> m;
+m -> l;
+m -> n;
+m -> o;
+}

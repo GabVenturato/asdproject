@@ -1,0 +1,1 @@
+digraph G1 {b-> a; c -> e;a -> e;a -> f;f -> b; z->t; z->u; u->v; v->z; a1->a2; a2->a3; a3->a4; a4->a5; a5->a1; x;}

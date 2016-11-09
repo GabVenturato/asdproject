@@ -1,0 +1,27 @@
+digraph mio_grafo {
+a->v;
+v->x;
+x->d;
+d->k;
+k->g;
+g->h;
+h->y;
+y->t;
+t->r;
+c->p;
+p->i;
+i->h;
+h->d;
+d->a;
+a->q;
+f->j;
+j->n;
+c->u;
+k->l;
+l->o;
+o->z;
+d->v;
+v->t;
+t->q;
+q->w;
+}

@@ -1,0 +1,7 @@
+digraph graph8 {
+g -> d;
+d -> c;
+j -> k;
+i;
+j -> c;
+}

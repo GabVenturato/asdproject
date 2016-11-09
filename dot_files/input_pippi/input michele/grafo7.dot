@@ -1,0 +1,23 @@
+digraph graph7 {
+l;
+a -> c;
+j;
+g -> f;
+c -> e;
+i -> l;
+b -> k;
+g -> h;
+i -> c;
+c -> a;
+f -> a;
+i -> f;
+c -> f;
+k -> d;
+a -> k;
+f -> h;
+h -> d;
+h -> g;
+c -> k;
+i -> d;
+g -> e;
+}

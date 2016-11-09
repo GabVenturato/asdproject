@@ -1,0 +1,20 @@
+digraph G7 {
+a -> d;
+d -> p1;
+p1 -> p3;
+b -> p1;
+b -> e;
+e -> m;
+m -> p2;
+p2 -> p3;
+c -> f;
+f -> p2;
+c -> g;
+g -> h;
+h -> i;
+i -> l;
+l -> p3;
+b -> p3;
+r;
+f -> l;
+}

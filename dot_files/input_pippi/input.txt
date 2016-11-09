@@ -1,0 +1,12 @@
+digraph G1 {
+a->z;
+b->d;
+k->u;
+u->v;
+k->v;
+v->d;
+d->u;
+e->j;
+j->e;
+c->k;
+}

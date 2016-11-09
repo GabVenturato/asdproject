@@ -1,0 +1,22 @@
+digraph graph6 {
+a -> d;
+a -> b;
+j -> g;
+h -> c;
+f -> k;
+f -> e;
+d -> i;
+b -> d;
+g -> i;
+j -> h;
+b -> i;
+a -> g;
+i -> a;
+j -> f;
+b -> c;
+c -> l;
+b -> g;
+b -> h;
+a -> e;
+h -> k;
+}

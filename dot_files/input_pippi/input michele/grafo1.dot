@@ -1,0 +1,18 @@
+digraph graph1 {
+h -> e;
+h -> l;
+j;
+g -> c;
+i;
+f -> h;
+b;
+a;
+l -> f;
+f -> c;
+d -> l;
+h -> f;
+e -> f;
+c -> d;
+e -> g;
+c -> e;
+}

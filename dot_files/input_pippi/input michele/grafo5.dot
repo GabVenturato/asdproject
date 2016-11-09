@@ -1,0 +1,14 @@
+digraph graph5 {
+b -> l;
+j -> l;
+h -> l;
+l -> k;
+a -> i;
+d -> b;
+d -> a;
+f -> b;
+h -> k;
+f -> j;
+i -> a;
+d -> c;
+}

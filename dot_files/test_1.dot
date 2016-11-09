@@ -3,7 +3,10 @@ digraph mygraph {
   a -> c;
   a -> d;
   b -> d;
-
-
   f;
+  f;
+
+
+  a;
+  a;
 }

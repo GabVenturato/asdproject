@@ -1,0 +1,16 @@
+digraph graph4 {
+e -> b;
+e -> h;
+j -> a;
+i -> f;
+b -> g;
+e -> g;
+b -> a;
+c -> a;
+e -> d;
+b -> e;
+h -> c;
+l -> h;
+a -> d;
+a -> i;
+}

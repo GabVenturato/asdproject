@@ -1,0 +1,14 @@
+digraph graph2 {
+e -> l;
+k;
+a -> e;
+h;
+b;
+g;
+i -> j;
+c -> j;
+d;
+f -> l;
+l -> f;
+j -> c;
+}

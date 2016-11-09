@@ -1,0 +1,8 @@
+digraph G8 {
+a -> c;
+b->c;
+f->c;
+g->c;
+e->c;
+d;
+}

@@ -1,0 +1,13 @@
+digraph G1 {
+a -> b;
+d -> b;
+b->c;
+c->d;
+n1;
+d -> eo ;
+eo->g;
+g->d;
+g->c;
+n2;
+n3;
+}
