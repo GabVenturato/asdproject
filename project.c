@@ -36,10 +36,11 @@ graph *build_graph_from_stdin();
 void add_element_from_dot_line(char *line, graph *G);
 vertex *add_vertex(char *label, graph *G);
 void add_edge(vertex *from, vertex *to, graph *G);
+void print_graph_in_stdout(graph *G);
 
 /* -------------------------- FUNCTIONS DEFINITION -------------------------- */
-/* graph: description in dot file from stdin
- * OUT: graph filled with dot file information
+/* @graph description in dot file from stdin
+ * RETURN graph filled with dot file information
  * The dot file is needed to be in a specific format. (see project assignment
  * description).
  */
@@ -60,71 +61,83 @@ graph *build_graph_from_stdin() {
   return G;
 }
 
-/* line: is a string representing a line of the dot file
- * G: is the graph where to put information retreived from the line
+/* @line is a string representing a line of the dot file
+ * @G is the graph where to put information retreived from the line
  */
 void add_element_from_dot_line(char *line, graph *G) {
-  char *v1_label, *v2_label, current;
-  int index=0, v1_found=0, charcount=0;
+  char v1_label[MAX_LABEL_LENGTH], v2_label[MAX_LABEL_LENGTH], current;
+  int index=0, v1_found=0, v2_found=0, charcount=0;
   vertex *v1, *v2;
 
-  do {
-    current = line[index];
+  // clean labels
+  v1_label[0] = '\0';
+  v2_label[0] = '\0';
+
+  do { // check line character per character
+    current = line[index++];
+    charcount = 0; // clean label length counter
+    // if there's alphanumeric char start to save the label
     while( isalnum(current) ) {
-      charcount = 0;
-      if( !v1_found ) {
+      if( !v1_found ) { // save in v1 if it is first word found, else in v2
         v1_label[charcount++] = current;
       } else {
         v2_label[charcount++] = current;
       }
-      current = line[++index];
+      current = line[index++];
     }
-    if( strlen(v1_label) > 0 ) {
-        v1_found = 1;
-        v1_label[charcount] = '\0';
+    // set found flags and close strings
+    if( strlen(v1_label)>0 && !v1_found ) {
+      v1_found = 1;
+      v1_label[charcount] = '\0';
     }
-    if( strlen(v2_label) > 0 ) {
-        v2_label[charcount] = '\0';
+    if( strlen(v2_label)>0 && !v2_found ) {
+      v2_found = 1;
+      v2_label[charcount] = '\0';
     }
-  } while( current != '\n' && current != ';' );
+  } while( current!='\n' && current!=';' && !v2_found );
 
+  // add vertices to the graph
   if( v1_found ) {
-    // v1 = add_vertex(v1_label, G);
+    v1 = add_vertex(v1_label, G);
   }
+  // if found v2 need to add both vertex (v2) and edge (v1->v2)
   if( strlen(v2_label) > 0 ) {
-    // v2 = add_vertex(v2_label, G);
-    // add_edge(v1, v2, G);
+    v2 = add_vertex(v2_label, G);
+    add_edge(v1, v2, G);
   }
 }
 
-/* label: string for the new vertex label
- * G: is a graph
- * OUT: pointer to the vertex just added. if already in graph return the pointer
- *      to that (old) vertex
+/* @label string for the new vertex label
+ * @G is a graph
+ * RETURN pointer to the vertex just added. if already in graph return the pointer
+ * 				to that (old) vertex
  */
 vertex *add_vertex(char *label, graph *G) {
-  vertex *vertices = G->vertices;
+  vertex *vertices = G->vertices, *prev_v = NULL;
 
   // check if present in graph
-  if( vertices != NULL ) {
-    while( vertices->next!=NULL ) {
-      if(strcmp(vertices->label, label) == 0) {
-        return vertices;
-      }
-      vertices = vertices->next;
+  while( vertices!=NULL ) {
+    if(strcmp(vertices->label, label) == 0) {
+      return vertices;
     }
+    prev_v = vertices;
+    vertices = vertices->next;
   }
 
   // if not present create vertex, fill it with appropriate information, and add
   vertex *v = (vertex *) malloc(sizeof(vertex));
   strcpy(v->label, label);
   v->next = NULL;
-  vertices->next = v;
+  // if it's the first vertex attach it to G, else to the last vertex in G
+  if( prev_v==NULL )
+    G->vertices = v;
+  else
+    prev_v->next = v;
 
   return v;
 }
 
-/* from,to: needed to be pointers to vertices already in G
+/* @from, @to needed to be pointers to vertices already in G
  */
 void add_edge(vertex *from, vertex *to, graph *G) {
   vertex *vertices = G->vertices;
@@ -141,42 +154,32 @@ void add_edge(vertex *from, vertex *to, graph *G) {
   }
 }
 
+/* @G is a graph
+ * PRINT in stdout the graph in dot format
+ */
+void print_graph_in_stdout(graph *G) {
+	printf("digraph out {\n");
+  for( vertex *v = G->vertices; v!=NULL; v=v->next ) {
+    printf("%s", v->label);
+		edge *e = v->edges;
+		if( e!=NULL ) {
+			printf(" ->");
+			while( e!=NULL ) {
+	      printf(" %s", e->connectsTo->label);
+				if( e->next != NULL ) printf(",");
+				e=e->next;
+	    }
+		}
+    printf(";\n");
+  }
+	printf("}\n");
+}
+
 /* ---------------------------------- MAIN ---------------------------------- */
 void main(int argc, char **argv) {
-  vertex *test;
 
-  graph *G;
-  // vertex *v1, *v2;
-  // v1 = (vertex *) malloc( sizeof(vertex *) );
-  // v2 = (vertex *) malloc( sizeof(vertex *) );
-  // v1->next = v2;
-  // v1->edges = NULL;
-  // strcpy(v1->label, "TEST1");
-  // v1->id = 1;
-  //
-  // v2->next = NULL;
-  // v2->edges = NULL;
-  // strcpy(v2->label, "TEST2");
-  // v2->id = 2;
-  //
-  // G->vertices = v1;
-  //
-  // vertex *v3 = (vertex *) malloc(sizeof(vertex *));
-  // v3->next = NULL;
-  // v3->id = 3;
-  // strcpy(v3->label, "TEST3");
-
-  //add_vertex(v3, G);
-
-  G = build_graph_from_stdin();
-
-  // for( vertex *v = G->vertices; v!=NULL; v = v->next ) {
-  //   printf("%s connects to:", v->label);
-  //   for( edge *e = v->edges; e!=NULL; e=e->next ) {
-  //     printf(" %s", e->connectsTo->label);
-  //   }
-  //   printf("\n");
-  // }
+  graph *G = build_graph_from_stdin();
+  print_graph_in_stdout(G);
 
   exit(1);
 }
