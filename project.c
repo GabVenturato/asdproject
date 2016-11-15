@@ -142,14 +142,13 @@ void add_element_from_dot_line(char *line, graph *G, int *count_vertices) {
  					pointer to that (old) vertex
  */
 vertex *add_vertex(graph *G, char *label, int *count_vertices) {
-  vertex *vertices = G->vertices, *prev_v = NULL;
+  vertex *vertices = G->vertices;
 
   // check if exists in graph
   while( vertices!=NULL ) {
     if(strcmp(vertices->label, label) == 0) {
       return vertices;
     }
-    prev_v = vertices;
     vertices = vertices->next;
   }
 
@@ -157,12 +156,9 @@ vertex *add_vertex(graph *G, char *label, int *count_vertices) {
   vertex *v = (vertex *) malloc(sizeof(vertex));
   strcpy(v->label, label);
 	v->id = *count_vertices;
-  v->next = NULL;
-  // if it's the first vertex attach it to G, else to the last vertex in G
-  if( prev_v==NULL )
-    G->vertices = v;
-  else
-    prev_v->next = v;
+  // attach it to G, at the top of vertices list
+	v->next = G->vertices;
+	G->vertices = v;
 
 	(*count_vertices)++;
   return v;
