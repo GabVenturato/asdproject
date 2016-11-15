@@ -11,6 +11,8 @@
 
 #define MAX_LABEL_LENGTH 1024
 
+typedef enum { false, true } bool;
+
 /* ----------------------------- DATA STRUCTURES ---------------------------- */
 // vertex and edge are used to implement Adjacency List
 typedef struct vertexT {
@@ -18,7 +20,7 @@ typedef struct vertexT {
   struct edgeT *edges;    // pointer to the edges list
 
   char label[MAX_LABEL_LENGTH];
-  int id; // not used (?)
+  int id;									// integer identificator for internal purpose
 } vertex;
 
 typedef struct edgeT {
@@ -33,8 +35,8 @@ typedef struct graphT {
 
 /* -------------------------- FUNCTIONS DECLARATION ------------------------- */
 graph *build_graph_from_stdin();
-void add_element_from_dot_line(char *line, graph *G);
-vertex *add_vertex(char *label, graph *G);
+void add_element_from_dot_line(char *line, graph *G, int *count_vertices);
+vertex *add_vertex(graph *G, char *label, int *count_vertices);
 void add_edge(vertex *from, vertex *to, graph *G);
 void print_graph_in_stdout(graph *G);
 
@@ -49,12 +51,13 @@ graph *build_graph_from_stdin() {
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
+	int count_vertices = 0; // the counter used to assign an id to every vertex
 
   G->vertices = NULL; // set empty vertices list
 
   getline(&line, &len, stdin); // skip first line
   while((read = getline(&line, &len, stdin)) != -1 ) {
-    add_element_from_dot_line(line, G);
+    add_element_from_dot_line(line, G, &count_vertices);
   }
 
   free(line);
@@ -63,11 +66,13 @@ graph *build_graph_from_stdin() {
 
 /* @line is a string representing a line of the dot file
  * @G is the graph where to put information retreived from the line
+ * @count_vertices is a pointer to the vertices number counter
  */
-void add_element_from_dot_line(char *line, graph *G) {
+void add_element_from_dot_line(char *line, graph *G, int *count_vertices) {
   char v1_label[MAX_LABEL_LENGTH], v2_label[MAX_LABEL_LENGTH], current;
-  int index=0, v1_found=0, v2_found=0, charcount=0;
+  int index=0, charcount=0;
   vertex *v1, *v2;
+	bool v1_found=false, v2_found=false;
 
   // clean labels
   v1_label[0] = '\0';
@@ -87,32 +92,33 @@ void add_element_from_dot_line(char *line, graph *G) {
     }
     // set found flags and close strings
     if( strlen(v1_label)>0 && !v1_found ) {
-      v1_found = 1;
+      v1_found = true;
       v1_label[charcount] = '\0';
     }
     if( strlen(v2_label)>0 && !v2_found ) {
-      v2_found = 1;
+      v2_found = true;
       v2_label[charcount] = '\0';
     }
   } while( current!='\n' && current!=';' && !v2_found );
 
   // add vertices to the graph
   if( v1_found ) {
-    v1 = add_vertex(v1_label, G);
+    v1 = add_vertex(G, v1_label, count_vertices);
   }
   // if found v2 need to add both vertex (v2) and edge (v1->v2)
   if( strlen(v2_label) > 0 ) {
-    v2 = add_vertex(v2_label, G);
+    v2 = add_vertex(G, v2_label, count_vertices);
     add_edge(v1, v2, G);
   }
 }
 
 /* @label string for the new vertex label
  * @G is a graph
- * RETURN pointer to the vertex just added. if already in graph return the pointer
- * 				to that (old) vertex
+ * @count_vertices is a pointer to the vertices number counter (used to fill id)
+ * RETURN pointer to the vertex just added. if already in graph return the
+ 					pointer to that (old) vertex
  */
-vertex *add_vertex(char *label, graph *G) {
+vertex *add_vertex(graph *G, char *label, int *count_vertices) {
   vertex *vertices = G->vertices, *prev_v = NULL;
 
   // check if present in graph
@@ -127,6 +133,7 @@ vertex *add_vertex(char *label, graph *G) {
   // if not present create vertex, fill it with appropriate information, and add
   vertex *v = (vertex *) malloc(sizeof(vertex));
   strcpy(v->label, label);
+	v->id = *count_vertices;
   v->next = NULL;
   // if it's the first vertex attach it to G, else to the last vertex in G
   if( prev_v==NULL )
@@ -134,6 +141,7 @@ vertex *add_vertex(char *label, graph *G) {
   else
     prev_v->next = v;
 
+	(*count_vertices)++;
   return v;
 }
 
@@ -160,7 +168,7 @@ void add_edge(vertex *from, vertex *to, graph *G) {
 void print_graph_in_stdout(graph *G) {
 	printf("digraph out {\n");
   for( vertex *v = G->vertices; v!=NULL; v=v->next ) {
-    printf("%s", v->label);
+    printf("%s (%3d)", v->label, v->id);
 		edge *e = v->edges;
 		if( e!=NULL ) {
 			printf(" ->");
@@ -174,6 +182,8 @@ void print_graph_in_stdout(graph *G) {
   }
 	printf("}\n");
 }
+
+
 
 /* ---------------------------------- MAIN ---------------------------------- */
 void main(int argc, char **argv) {
