@@ -21,6 +21,8 @@ typedef struct vertexT {
 
   char label[MAX_LABEL_LENGTH];
   int id;									// integer identificator for internal purpose
+	int f;									// time when (DFS) visit finish
+	struct setT *setnode;		// pointer to the node in disjoint set
 } vertex;
 
 typedef struct edgeT {
@@ -32,6 +34,20 @@ typedef struct graphT {
   struct vertexT *vertices;
 } graph;
 
+// disjoint set for SCC management
+typedef struct setT {
+	struct vertexT *v;	// keep a pointer to the referred vertex in the graph
+  int rank;
+  struct setT *p;
+} set;
+
+// SCC array base element to manage a single SCC of the graph
+typedef struct SCCelT {
+	struct setT *SCC;
+	bool isreached;	// if SCC is reached
+	int nreach;			// number of (others) SCC reached
+} SCCel;
+
 
 /* -------------------------- FUNCTIONS DECLARATION ------------------------- */
 graph *build_graph_from_stdin();
@@ -39,6 +55,13 @@ void add_element_from_dot_line(char *line, graph *G, int *count_vertices);
 vertex *add_vertex(graph *G, char *label, int *count_vertices);
 void add_edge(vertex *from, vertex *to, graph *G);
 void print_graph_in_stdout(graph *G);
+
+// function for disjoint sets
+set *make_set(vertex *v);
+set *find_set(set *x);
+void union_set(set *x, set *y);
+void link(set *x, set *y);
+
 
 /* -------------------------- FUNCTIONS DEFINITION -------------------------- */
 /* @graph description in dot file from stdin
@@ -121,7 +144,7 @@ void add_element_from_dot_line(char *line, graph *G, int *count_vertices) {
 vertex *add_vertex(graph *G, char *label, int *count_vertices) {
   vertex *vertices = G->vertices, *prev_v = NULL;
 
-  // check if present in graph
+  // check if exists in graph
   while( vertices!=NULL ) {
     if(strcmp(vertices->label, label) == 0) {
       return vertices;
@@ -183,7 +206,49 @@ void print_graph_in_stdout(graph *G) {
 	printf("}\n");
 }
 
+/* @v is a pointer to a graph vertex
+ * RETURN a pointer to the new element of the set
+ */
+set *make_set(vertex *v) {
+  set *x;
+  x = (set *) malloc(sizeof(set));
+  x->p = x;
+  x->v = v;
+  x->rank = 0;
+  return x;
+}
 
+/* find_set() implements find with path compression
+ * @x is a pointer to a set element
+ * RETURN the set representative in which the element (pointed by) x is
+ */
+set *find_set(set *x) {
+  if( x != x->p ) {
+    x->p = find_set( x->p );
+  }
+  return x->p;
+}
+
+/* union_set() implements union by rank
+ * @x,@y are pointers to elements of a disjoint set
+ * DO an union if x and y aren't in the same set
+ */
+void union_set(set *x, set *y) {
+ link( find_set(x), find_set(y) );
+}
+
+void link(set *x, set *y) {
+	if( x!=y ) {
+		if( x->rank > y->rank ) {
+	    y->p = x;
+	  } else {
+	    x->p = y;
+	    if( x->rank == y->rank ) {
+	      (y->rank)++;
+	    }
+	  }
+	}
+}
 
 /* ---------------------------------- MAIN ---------------------------------- */
 void main(int argc, char **argv) {
