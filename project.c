@@ -80,6 +80,10 @@ vlist *vlist_push(vlist *l, vertex *v);
 vertex *vlist_pop(vlist *l);
 void vlist_print(vlist *l);
 
+// graph transposing
+void transpose_graph(graph *G);
+void print_transposed_graph_in_stdout(graph *G);
+
 /* -------------------------- FUNCTIONS DEFINITION -------------------------- */
 /* STDIN description in dot file from stdin
  * RETURN graph filled with dot file information
