@@ -2,8 +2,7 @@
  * Progetto del laboratorio di ASD anno 2015/2016
  */
 
-/* ctype.h - used to parse the input
-*/
+// ctype.h - used to parse the input (isalnum function)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,10 +13,14 @@
 typedef enum { false, true } bool;
 
 /* ----------------------------- DATA STRUCTURES ---------------------------- */
+// global variables
+int totvertices = 0;			// stores the number of total vertices in the graph
+
 // vertex and edge are used to implement Adjacency List
 typedef struct vertexT {
   struct vertexT *next;   // next vertex in the list
   struct edgeT *edges;    // pointer to the edges list
+	struct edgeT *tedges;		// pointer to the transposed edges list
 
   char label[MAX_LABEL_LENGTH];
   int id;									// integer identificator for internal purpose
@@ -36,7 +39,7 @@ typedef struct graphT {
 
 // disjoint set for SCC management
 typedef struct setT {
-	struct vertexT *v;	// keep a pointer to the referred vertex in the graph
+	struct vertexT *v;			// keep a pointer to the referred vertex in the graph
   int rank;
   struct setT *p;
 } set;
@@ -44,15 +47,21 @@ typedef struct setT {
 // SCC array base element to manage a single SCC of the graph
 typedef struct SCCelT {
 	struct setT *SCC;
-	bool isreached;	// if SCC is reached
-	int nreach;			// number of (others) SCC reached
+	bool isreached;					// if SCC is reached
+	int nreach;							// number of (others) SCC reached
 } SCCel;
+
+// list of vertices
+typedef struct vlistT {
+	struct vertexT *v;				// pointer to a graph vertex
+	struct vlistT *next;
+} vlist;
 
 
 /* -------------------------- FUNCTIONS DECLARATION ------------------------- */
 graph *build_graph_from_stdin();
-void add_element_from_dot_line(char *line, graph *G, int *count_vertices);
-vertex *add_vertex(graph *G, char *label, int *count_vertices);
+void add_element_from_dot_line(char *line, graph *G);
+vertex *add_vertex(graph *G, char *label);
 void add_edge(vertex *from, vertex *to, graph *G);
 void print_graph_in_stdout(graph *G);
 
@@ -62,9 +71,17 @@ set *find_set(set *x);
 void union_set(set *x, set *y);
 void link(set *x, set *y);
 
+// graph visits
+vlist *DFS(graph *G);
+vlist *DFS_visit(graph *G, vertex *u, bool *visited, vlist *ftimevertices);
+
+// vertices list management
+vlist *vlist_push(vlist *l, vertex *v);
+vertex *vlist_pop(vlist *l);
+void vlist_print(vlist *l);
 
 /* -------------------------- FUNCTIONS DEFINITION -------------------------- */
-/* @graph description in dot file from stdin
+/* STDIN description in dot file from stdin
  * RETURN graph filled with dot file information
  * The dot file is needed to be in a specific format. (see project assignment
  * description).
@@ -74,13 +91,12 @@ graph *build_graph_from_stdin() {
   char *line = NULL;
   size_t len = 0;
   ssize_t read;
-	int count_vertices = 0; // the counter used to assign an id to every vertex
 
   G->vertices = NULL; // set empty vertices list
 
   getline(&line, &len, stdin); // skip first line
   while((read = getline(&line, &len, stdin)) != -1 ) {
-    add_element_from_dot_line(line, G, &count_vertices);
+    add_element_from_dot_line(line, G);
   }
 
   free(line);
@@ -89,9 +105,14 @@ graph *build_graph_from_stdin() {
 
 /* @line is a string representing a line of the dot file
  * @G is the graph where to put information retreived from the line
- * @count_vertices is a pointer to the vertices number counter
+ * this function scan character per character the line passed as parameter, when
+ * it founds an alphanumeric char start to store a string for v1 (first vertex),
+ * continue while the first non-alphanumeric character is found. do the same for
+ * v2 (second vertex, if present). if v2 exists it needs to create also the
+ * edge. this function works only with the input format specified in project
+ * assignment.
  */
-void add_element_from_dot_line(char *line, graph *G, int *count_vertices) {
+void add_element_from_dot_line(char *line, graph *G) {
   char v1_label[MAX_LABEL_LENGTH], v2_label[MAX_LABEL_LENGTH], current;
   int index=0, charcount=0;
   vertex *v1, *v2;
@@ -126,22 +147,24 @@ void add_element_from_dot_line(char *line, graph *G, int *count_vertices) {
 
   // add vertices to the graph
   if( v1_found ) {
-    v1 = add_vertex(G, v1_label, count_vertices);
-  }
-  // if found v2 need to add both vertex (v2) and edge (v1->v2)
-  if( strlen(v2_label) > 0 ) {
-    v2 = add_vertex(G, v2_label, count_vertices);
-    add_edge(v1, v2, G);
+    v1 = add_vertex(G, v1_label);
+
+		// if found v2 need to add both vertex (v2) and edge (v1->v2)
+	  if( strlen(v2_label) > 0 ) {
+	    v2 = add_vertex(G, v2_label);
+	    add_edge(v1, v2, G);
+	  }
   }
 }
 
-/* @label string for the new vertex label
- * @G is a graph
- * @count_vertices is a pointer to the vertices number counter (used to fill id)
+/* @G is a graph
+ * @label string for the new vertex label
  * RETURN pointer to the vertex just added. if already in graph return the
- 					pointer to that (old) vertex
+ *        pointer to that (old) vertex
+ * NOTE the unicity of the identifier is granted from the global variable
+ *      "totvertices". identifier unicity not cheked in this function.
  */
-vertex *add_vertex(graph *G, char *label, int *count_vertices) {
+vertex *add_vertex(graph *G, char *label) {
   vertex *vertices = G->vertices;
 
   // check if exists in graph
@@ -155,30 +178,26 @@ vertex *add_vertex(graph *G, char *label, int *count_vertices) {
   // if not present create vertex, fill it with appropriate information, and add
   vertex *v = (vertex *) malloc(sizeof(vertex));
   strcpy(v->label, label);
-	v->id = *count_vertices;
+	v->id = totvertices; // use the current number of total edges as identifier
   // attach it to G, at the top of vertices list
 	v->next = G->vertices;
 	G->vertices = v;
 
-	(*count_vertices)++;
+	totvertices++;
   return v;
 }
 
-/* @from, @to needed to be pointers to vertices already in G
+/* @from, @to needed to be pointers to vertices already inserted in G
+ * @G is a graph
+ * NOTE the function doesn't check for duplicated edges because of the
+ *      assumption that in the dot input file cannot be duplicated edges
  */
 void add_edge(vertex *from, vertex *to, graph *G) {
-  vertex *vertices = G->vertices;
-
-  while( vertices!=NULL && vertices!=from ) { vertices = vertices->next; }
-
-  if( vertices==from ) { // if the vertex exists in the graph G
-    // create the new edge and add it in head of edges list
-    edge *oldedges = vertices->edges;
-    edge *newedge = (edge *) malloc(sizeof(edge));
-    newedge->connectsTo = to;
-    newedge->next = oldedges;
-    vertices->edges = newedge;
-  }
+  // create the new edge and add it in head of edges list
+  edge *newedge = (edge *) malloc(sizeof(edge));
+  newedge->connectsTo = to;
+  newedge->next = from->edges;
+  from->edges = newedge;
 }
 
 /* @G is a graph
@@ -227,12 +246,12 @@ set *find_set(set *x) {
 
 /* union_set() implements union by rank
  * @x,@y are pointers to elements of a disjoint set
- * DO an union if x and y aren't in the same set
+ * this function do an union if x and y aren't in the same set
+ * link() is used only here by union_set()
  */
 void union_set(set *x, set *y) {
  link( find_set(x), find_set(y) );
 }
-
 void link(set *x, set *y) {
 	if( x!=y ) {
 		if( x->rank > y->rank ) {
@@ -246,11 +265,98 @@ void link(set *x, set *y) {
 	}
 }
 
+/* @G is a graph
+ * RETURN the list of vertices ordered by finish visit time
+ * this function perform a DFS visit in order to order graph vertices by finish
+ * visit time. more details in DFS_visit() description.
+ * DFS_visit() is used only here to perform the DFS visit
+ */
+vlist *DFS(graph *G) {
+	bool visited[totvertices];		// keep track of visited vertices (here use id)
+	vlist *ftimevertices = NULL;	// list to fill with vertices
+	vertex *u;
+
+	// set all vertices as "not visited"
+	for(int i=0; i<totvertices; i++) {
+		visited[i] = false;
+	}
+
+	u = G->vertices;
+	while( u!=NULL ) {
+		if( !visited[u->id] ) {
+			ftimevertices = DFS_visit(G, u, visited, ftimevertices);
+		}
+		u = u->next;
+	}
+
+	return ftimevertices;
+}
+
+/* @G is a graph
+ * @u is a vertex currently analized by the function
+ * @visited pointer to the visited array that keep track of visited vertices
+ * @ftimevertices is the list to fill with vertices in appropriate order
+ * this function is used to check the finish time of the visit in each node and
+ * store them in a list that will be used to find SCC of the graph
+ */
+vlist *DFS_visit(graph *G, vertex *u, bool *visited, vlist *ftimevertices) {
+	visited[u->id] = true;
+
+	for(edge *e=u->edges; e!=NULL; e=e->next) {
+		vertex *v = e->connectsTo;
+		if( !visited[v->id] ) {
+			ftimevertices = DFS_visit(G, v, visited, ftimevertices);
+		}
+	}
+
+	// every time the visit in u finishes, store the vertex in the list and return
+	// the updated list
+	return vlist_push( ftimevertices, u );
+}
+
+/* @l is a pointer to the head of the list
+ * @v is a pointer to a graph vertex
+ * RETURN the list with the new element added
+ * this function insert the element in the head of the list
+ */
+vlist *vlist_push(vlist *l, vertex *v) {
+	vlist *el;
+	el = (vlist *) malloc(sizeof(vlist));
+	el->v = v;
+	el->next = l;
+	return el;
+}
+
+/* @l is a pointer to the head of the list
+ * RETURN a pointer to the vertex extracted
+ * this function extract elements from the head
+ */
+vertex *vlist_pop(vlist *l) {
+	vertex *v = NULL;
+	if( l!=NULL ) {
+		v = l->v;
+		l = l->next;
+	}
+	return v;
+}
+
+/* @l is a pointer to the head of the list
+ */
+void vlist_print(vlist *l) {
+	for(vlist *p=l; p!=NULL; p=p->next) {
+		printf("%s(%d) ", (p->v)->label, (p->v)->id);
+	}
+	printf("\n");
+}
+
 /* ---------------------------------- MAIN ---------------------------------- */
 void main(int argc, char **argv) {
 
   graph *G = build_graph_from_stdin();
   print_graph_in_stdout(G);
+
+	vlist *ftimevisit = DFS(G);
+	vlist_print(ftimevisit);
 
   exit(1);
 }
