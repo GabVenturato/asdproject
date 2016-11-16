@@ -349,14 +349,57 @@ void vlist_print(vlist *l) {
 	printf("\n");
 }
 
+/* @G is a graph
+ * transpose a graph and save the transposed edges into the list "tedges" stored
+ * in every vertex
+ */
+void transpose_graph(graph *G) {
+	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
+		for(edge *e=v->edges; e!=NULL; e=e->next) {
+			vertex *u = e->connectsTo;
+			// create the new edge (u,v) and add it in head of u transposed edges list
+		  edge *newedge = (edge *) malloc(sizeof(edge));
+		  newedge->connectsTo = v;
+		  newedge->next = u->tedges;
+		  u->tedges = newedge;
+		}
+	}
+}
+
+/* @G is a graph
+ * like print_graph_in_stdout() but use the transposed edges list to print the
+ * transposed graph
+ */
+void print_transposed_graph_in_stdout(graph *G) {
+	printf("digraph out {\n");
+  for( vertex *v = G->vertices; v!=NULL; v=v->next ) {
+    printf("%s (%3d)", v->label, v->id);
+		edge *e = v->tedges;
+		if( e!=NULL ) {
+			printf(" ->");
+			while( e!=NULL ) {
+	      printf(" %s", e->connectsTo->label);
+				if( e->next != NULL ) printf(",");
+				e=e->next;
+	    }
+		}
+    printf(";\n");
+  }
+	printf("}\n");
+}
+
 /* ---------------------------------- MAIN ---------------------------------- */
 void main(int argc, char **argv) {
 
   graph *G = build_graph_from_stdin();
   print_graph_in_stdout(G);
 
-	vlist *ftimevisit = DFS(G);
-	vlist_print(ftimevisit);
+	// vlist *ftimevisit = DFS(G);
+	// vlist_print(ftimevisit);
+
+	printf("\n");
+	transpose_graph(G);
+	print_transposed_graph_in_stdout(G);
 
   exit(1);
 }
