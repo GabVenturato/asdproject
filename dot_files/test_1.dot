@@ -2,7 +2,7 @@ digraph mygraph {
   a -> b;
   a -> c;
   a -> d;
-  b -> d;
+  b ->d;
   f;
   f;
 
