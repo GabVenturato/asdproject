@@ -18,6 +18,7 @@ typedef enum { false, true } bool;
 /* ----------------------------- DATA STRUCTURES ---------------------------- */
 // global variables
 int totvertices = 0;			// stores the number of total vertices in the graph
+int totscc = 0;						// stores the number of total sccomponents
 
 // vertex and edge are used to implement Adjacency List
 typedef struct vertex_T {
@@ -29,7 +30,6 @@ typedef struct vertex_T {
   int id;									// integer identificator for internal purpose
 	int depth;							// depth of the node (in the tree created later)
 	struct scc_T *sccref;		// reference to the scc which the vertex belongs
-	bool isroot;						// if it is the root that solve the problem
 } vertex;
 
 typedef struct edge_T {
@@ -46,6 +46,7 @@ typedef struct graph_T {
 // SCC management
 typedef struct scc_T {
 	struct vertex_T *root;
+	int id;									// integer identificator for internal purpose
 	bool isreached;					// if SCC is reached
 	int nreach;							// number of (others) SCC reached
 	struct scc_T *next;
@@ -67,7 +68,7 @@ graph *build_graph_from_stdin();
 void add_element_from_dot_line(char *line, graph *G);
 vertex *add_vertex(graph *G, char *label);
 void add_edge(vertex *from, vertex *to, graph *G, char *color, char *style);
-void print_graph_in_stdout(graph *G);
+void print_graph_in_stdout(graph *G, vertex *root, int nedges);
 
 // function for disjoint sets
 // set *make_set(vertex *v);
@@ -192,7 +193,6 @@ vertex *add_vertex(graph *G, char *label) {
   // attach it to G, at the top of vertices list
 	v->next = G->vertices;
 	G->vertices = v;
-	v->isroot = false;
 	totvertices++;
   return v;
 }
@@ -217,20 +217,29 @@ void add_edge(vertex *from, vertex *to, graph *G, char *color, char *style) {
 /* @G is a graph
  * PRINT in stdout the graph in dot format
  */
-void print_graph_in_stdout(graph *G) {
+void print_graph_in_stdout(graph *G, vertex *root, int nedges) {
+	char color[64], style[64], edge_decoration[256];
+
 	printf("digraph out {\n");
   for( vertex *v = G->vertices; v!=NULL; v=v->next ) {
-    printf("%s", v->label, v->id);
-		edge *e = v->edges;
-		if( e!=NULL ) {
-			printf(" ->");
-			while( e!=NULL ) {
-	      printf(" %s", e->connectsTo->label);
-				if( e->next != NULL ) printf(",");
-				e=e->next;
-	    }
+		if( v==root ) {
+			printf("%s [label=\"root=%s; |E'|-|E|=%d\"];\n", v->label, root->label, nedges);
+		} else {
+			printf("%s [label=\"d(%s,%s)=%d\"];\n", v->label, root->label, v->label, 0);
 		}
-    printf(";\n");
+
+		edge *e = v->edges;
+		while( e!=NULL ) {
+			color[0] = '\0';
+			style[0] = '\0';
+			edge_decoration[0] = '\0';
+			if( strcmp(e->style, DEFAULT_EDGE_STYLE) ) sprintf(style, "style=%s", e->style);
+			if( strcmp(e->color, DEFAULT_EDGE_COLOR) ) sprintf(color, "color=%s", e->color);
+			if( strlen(color) && strlen(style) ) sprintf(edge_decoration, " [%s, %s]", style, color);
+			else if( strlen(color) || strlen(style) ) sprintf(edge_decoration, " [%s%s]", style, color);
+      printf("%s -> %s%s;\n", v->label, e->connectsTo->label, edge_decoration);
+			e=e->next;
+		}
   }
 	printf("}\n");
 }
@@ -346,9 +355,11 @@ sccset *DFS_SCC(graph *Gt, vlist *ftimevertices) {
 		if( !visited[u->id] ) {
 			scc *s = (scc *) malloc(sizeof(scc));
 			s->root = u;
+			s->id = totscc;
 			u->sccref = s;
 			s->next = SCCset->sccomponents;
 			SCCset->sccomponents = s;
+			totscc++;
 			DFS_SCC_visit(Gt, u, visited, s);
 		}
 		li = li->next;
@@ -463,11 +474,14 @@ void scc_reachability(graph *G) {
 	}
 }
 
-vertex *add_missing_edges(graph *G) {
+vertex *add_missing_edges(graph *G, int *nedges) {
 	vertex *root, *v;
-	vlist *scc_not_reached, *li;
+	vlist *scc_not_reached=NULL, *li;
 	int maxnreach=0;
 	scc *s;
+	bool already_in[totscc];
+
+	for(int i=0; i<totscc; i++) already_in[i] = false;
 
 	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
 		s = v->sccref;
@@ -475,27 +489,45 @@ vertex *add_missing_edges(graph *G) {
 			maxnreach = s->nreach;
 			root = v;
 		}
-		if( !s->isreached ) {
-			vlist_push(scc_not_reached, v);
+		if( !s->isreached && !already_in[s->id] ) {
+			scc_not_reached = vlist_push(scc_not_reached, s->root);
+			already_in[s->id] = true;
 		}
 	}
 
 	li = scc_not_reached;
+	*nedges = 0;
 	while( li!=NULL ) {
 		v = li->v;
-		add_edge(root, v, G, "red", DEFAULT_EDGE_STYLE);
+		if( v!=root ) {
+			add_edge(root, v, G, "red", DEFAULT_EDGE_STYLE);
+			(*nedges)++;
+		}
 		li = li->next;
 	}
 
-	root->isroot = true;
 	return root;
+}
+
+void print_scc(sccset *SCCset) {
+	printf("SCC founded:\n");
+	for(scc *s=SCCset->sccomponents; s!=NULL; s=s->next) {
+		printf("id: %4d; root: %s\n", s->id, s->root->label);
+	}
+	printf("\n");
 }
 
 /* ---------------------------------- MAIN ---------------------------------- */
 void main(int argc, char **argv) {
 
-  // graph *G = build_graph_from_stdin();
-  // print_graph_in_stdout(G);
+  graph *G = build_graph_from_stdin();
+  vlist *ftimevertices = DFS(G);
+	transpose_graph(G);
+	sccset *SCCset = DFS_SCC(G, ftimevertices);
+	scc_reachability(G);
+	int nedges;
+	vertex *root = add_missing_edges(G, &nedges);
+	print_graph_in_stdout(G, root, nedges);
 
 	// vlist *ftimevisit = DFS(G);
 	// vlist_print(ftimevisit);
