@@ -1,6 +1,6 @@
 digraph mygraph {
   a -> b;
-  a -> c;
+  a -> c[color=red];
   a -> d;
   b ->d;
   f;
