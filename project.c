@@ -7,8 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <limits.h>
 
 #define MAX_LABEL_LENGTH 1024
+#define DEFAULT_EDGE_COLOR ""
+#define DEFAULT_EDGE_STYLE ""
 
 typedef enum { false, true } bool;
 
@@ -17,44 +20,45 @@ typedef enum { false, true } bool;
 int totvertices = 0;			// stores the number of total vertices in the graph
 
 // vertex and edge are used to implement Adjacency List
-typedef struct vertexT {
-  struct vertexT *next;   // next vertex in the list
-  struct edgeT *edges;    // pointer to the edges list
-	struct edgeT *tedges;		// pointer to the transposed edges list
+typedef struct vertex_T {
+  struct vertex_T *next;	// next vertex in the list
+  struct edge_T *edges;		// pointer to the edges list
+	struct edge_T *tedges;	// pointer to the transposed edges list
 
   char label[MAX_LABEL_LENGTH];
   int id;									// integer identificator for internal purpose
-	int f;									// time when (DFS) visit finish
-	struct setT *setnode;		// pointer to the node in disjoint set
+	int depth;							// depth of the node (in the tree created later)
+	struct scc_T *sccref;		// reference to the scc which the vertex belongs
+	bool isroot;						// if it is the root that solve the problem
 } vertex;
 
-typedef struct edgeT {
-  struct vertexT *connectsTo;
-  struct edgeT *next;
+typedef struct edge_T {
+  struct vertex_T *connectsTo;
+  struct edge_T *next;
+	char color[32];					// to manage the color in output .dot file
+	char style[32];					// to manage the style in output .dot file
 } edge;
 
-typedef struct graphT {
-  struct vertexT *vertices;
+typedef struct graph_T {
+  struct vertex_T *vertices;
 } graph;
 
-// disjoint set for SCC management
-typedef struct setT {
-	struct vertexT *v;			// keep a pointer to the referred vertex in the graph
-  int rank;
-  struct setT *p;
-} set;
-
-// SCC array base element to manage a single SCC of the graph
-typedef struct SCCelT {
-	struct setT *SCC;
+// SCC management
+typedef struct scc_T {
+	struct vertex_T *root;
 	bool isreached;					// if SCC is reached
 	int nreach;							// number of (others) SCC reached
-} SCCel;
+	struct scc_T *next;
+} scc;
+
+typedef struct sccset_T {
+	struct scc_T *sccomponents;
+} sccset;
 
 // list of vertices
-typedef struct vlistT {
-	struct vertexT *v;				// pointer to a graph vertex
-	struct vlistT *next;
+typedef struct vlist_T {
+	struct vertex_T *v;			// pointer to a graph vertex
+	struct vlist_T *next;
 } vlist;
 
 
@@ -62,18 +66,20 @@ typedef struct vlistT {
 graph *build_graph_from_stdin();
 void add_element_from_dot_line(char *line, graph *G);
 vertex *add_vertex(graph *G, char *label);
-void add_edge(vertex *from, vertex *to, graph *G);
+void add_edge(vertex *from, vertex *to, graph *G, char *color, char *style);
 void print_graph_in_stdout(graph *G);
 
 // function for disjoint sets
-set *make_set(vertex *v);
-set *find_set(set *x);
-void union_set(set *x, set *y);
-void link(set *x, set *y);
+// set *make_set(vertex *v);
+// set *find_set(set *x);
+// void union_set(set *x, set *y);
+// void link(set *x, set *y);
 
 // graph visits
 vlist *DFS(graph *G);
 vlist *DFS_visit(graph *G, vertex *u, bool *visited, vlist *ftimevertices);
+sccset *DFS_SCC(graph *Gt, vlist *ftimevertices);
+void DFS_SCC_visit(graph *Gt, vertex *u, bool *visited, scc *sccref);
 
 // vertices list management
 vlist *vlist_push(vlist *l, vertex *v);
@@ -156,7 +162,7 @@ void add_element_from_dot_line(char *line, graph *G) {
 		// if found v2 need to add both vertex (v2) and edge (v1->v2)
 	  if( strlen(v2_label) > 0 ) {
 	    v2 = add_vertex(G, v2_label);
-	    add_edge(v1, v2, G);
+	    add_edge(v1, v2, G, DEFAULT_EDGE_COLOR, DEFAULT_EDGE_STYLE);
 	  }
   }
 }
@@ -186,21 +192,25 @@ vertex *add_vertex(graph *G, char *label) {
   // attach it to G, at the top of vertices list
 	v->next = G->vertices;
 	G->vertices = v;
-
+	v->isroot = false;
 	totvertices++;
   return v;
 }
 
 /* @from, @to needed to be pointers to vertices already inserted in G
  * @G is a graph
+ * @color is a string that defines the edge color (REQUIRED length<32)
+ * @style is a string that defines the edge style (REQUIRED length<32)
  * NOTE the function doesn't check for duplicated edges because of the
  *      assumption that in the dot input file cannot be duplicated edges
  */
-void add_edge(vertex *from, vertex *to, graph *G) {
+void add_edge(vertex *from, vertex *to, graph *G, char *color, char *style) {
   // create the new edge and add it in head of edges list
   edge *newedge = (edge *) malloc(sizeof(edge));
   newedge->connectsTo = to;
   newedge->next = from->edges;
+	strcpy(newedge->color, color);
+	strcpy(newedge->style, style);
   from->edges = newedge;
 }
 
@@ -210,7 +220,7 @@ void add_edge(vertex *from, vertex *to, graph *G) {
 void print_graph_in_stdout(graph *G) {
 	printf("digraph out {\n");
   for( vertex *v = G->vertices; v!=NULL; v=v->next ) {
-    printf("%s (%3d)", v->label, v->id);
+    printf("%s", v->label, v->id);
 		edge *e = v->edges;
 		if( e!=NULL ) {
 			printf(" ->");
@@ -228,46 +238,47 @@ void print_graph_in_stdout(graph *G) {
 /* @v is a pointer to a graph vertex
  * RETURN a pointer to the new element of the set
  */
-set *make_set(vertex *v) {
-  set *x;
-  x = (set *) malloc(sizeof(set));
-  x->p = x;
-  x->v = v;
-  x->rank = 0;
-  return x;
-}
+// set *make_set(vertex *v) {
+//   set *x;
+//   x = (set *) malloc(sizeof(set));
+//   x->p = x;
+//   x->v = v;
+// 	v->setnode = x;	// save in the vertex in which element of the set it is saved
+//   x->rank = 0;
+//   return x;
+// }
 
 /* find_set() implements find with path compression
  * @x is a pointer to a set element
  * RETURN the set representative in which the element (pointed by) x is
  */
-set *find_set(set *x) {
-  if( x != x->p ) {
-    x->p = find_set( x->p );
-  }
-  return x->p;
-}
+// set *find_set(set *x) {
+//   if( x != x->p ) {
+//     x->p = find_set( x->p );
+//   }
+//   return x->p;
+// }
 
 /* union_set() implements union by rank
  * @x,@y are pointers to elements of a disjoint set
  * this function do an union if x and y aren't in the same set
  * link() is used only here by union_set()
  */
-void union_set(set *x, set *y) {
- link( find_set(x), find_set(y) );
-}
-void link(set *x, set *y) {
-	if( x!=y ) {
-		if( x->rank > y->rank ) {
-	    y->p = x;
-	  } else {
-	    x->p = y;
-	    if( x->rank == y->rank ) {
-	      (y->rank)++;
-	    }
-	  }
-	}
-}
+// void union_set(set *x, set *y) {
+//  link( find_set(x), find_set(y) );
+// }
+// void link(set *x, set *y) {
+// 	if( x!=y ) {
+// 		if( x->rank > y->rank ) {
+// 	    y->p = x;
+// 	  } else {
+// 	    x->p = y;
+// 	    if( x->rank == y->rank ) {
+// 	      (y->rank)++;
+// 	    }
+// 	  }
+// 	}
+// }
 
 /* @G is a graph
  * RETURN the list of vertices ordered by finish visit time
@@ -318,6 +329,46 @@ vlist *DFS_visit(graph *G, vertex *u, bool *visited, vlist *ftimevertices) {
 	return vlist_push( ftimevertices, u );
 }
 
+sccset *DFS_SCC(graph *Gt, vlist *ftimevertices) {
+	bool visited[totvertices];		// keep track of visited vertices (here use id)
+	sccset *SCCset = (sccset *) malloc(sizeof(sccset));
+	SCCset->sccomponents = NULL;
+	vertex *u;
+
+	// set all vertices as "not visited"
+	for(int i=0; i<totvertices; i++) {
+		visited[i] = false;
+	}
+
+	vlist *li = ftimevertices;	// use the list of vertices ordered by finish visit time
+	while( li!=NULL ) {
+		u = li->v;
+		if( !visited[u->id] ) {
+			scc *s = (scc *) malloc(sizeof(scc));
+			s->root = u;
+			u->sccref = s;
+			s->next = SCCset->sccomponents;
+			SCCset->sccomponents = s;
+			DFS_SCC_visit(Gt, u, visited, s);
+		}
+		li = li->next;
+	}
+
+	return SCCset;
+}
+
+void DFS_SCC_visit(graph *Gt, vertex *u, bool *visited, scc *sccref) {
+	visited[u->id] = true;
+
+	for(edge *e=u->tedges; e!=NULL; e=e->next) {
+		vertex *v = e->connectsTo;
+		if( !visited[v->id] ) {
+			v->sccref = sccref;
+			DFS_SCC_visit(Gt, v, visited, sccref);
+		}
+	}
+}
+
 /* @l is a pointer to the head of the list
  * @v is a pointer to a graph vertex
  * RETURN the list with the new element added
@@ -335,14 +386,17 @@ vlist *vlist_push(vlist *l, vertex *v) {
  * RETURN a pointer to the vertex extracted
  * this function extract elements from the head
  */
-vertex *vlist_pop(vlist *l) {
-	vertex *v = NULL;
-	if( l!=NULL ) {
-		v = l->v;
-		l = l->next;
-	}
-	return v;
-}
+// vertex *vlist_pop(vlist *l) {
+// 	vertex *v = NULL;
+// 	vlist* tmp;
+// 	if( l!=NULL ) {
+// 		v = l->v;
+// 		tmp = l;
+// 		l = l->next;
+// 	}
+// 	free(tmp);	// free memory occupied from removed element
+// 	return v;
+// }
 
 /* @l is a pointer to the head of the list
  */
@@ -392,18 +446,66 @@ void print_transposed_graph_in_stdout(graph *G) {
 	printf("}\n");
 }
 
+void scc_reachability(graph *G) {
+	scc *i, *j;
+
+	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
+		i = v->sccref;
+		for(edge *e=v->edges; e!=NULL; e=e->next) {
+			vertex *u = e->connectsTo;
+			j = u->sccref;
+
+			if( i!=j ) {
+				j->isreached = true;
+				(i->nreach)++;
+			}
+		}
+	}
+}
+
+vertex *add_missing_edges(graph *G) {
+	vertex *root, *v;
+	vlist *scc_not_reached, *li;
+	int maxnreach=0;
+	scc *s;
+
+	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
+		s = v->sccref;
+		if( s->nreach > maxnreach ) {
+			maxnreach = s->nreach;
+			root = v;
+		}
+		if( !s->isreached ) {
+			vlist_push(scc_not_reached, v);
+		}
+	}
+
+	li = scc_not_reached;
+	while( li!=NULL ) {
+		v = li->v;
+		add_edge(root, v, G, "red", DEFAULT_EDGE_STYLE);
+		li = li->next;
+	}
+
+	root->isroot = true;
+	return root;
+}
+
 /* ---------------------------------- MAIN ---------------------------------- */
 void main(int argc, char **argv) {
 
-  graph *G = build_graph_from_stdin();
-  print_graph_in_stdout(G);
+  // graph *G = build_graph_from_stdin();
+  // print_graph_in_stdout(G);
 
 	// vlist *ftimevisit = DFS(G);
 	// vlist_print(ftimevisit);
 
-	printf("\n");
-	transpose_graph(G);
-	print_transposed_graph_in_stdout(G);
+	// printf("\n");
+	// transpose_graph(G);
+	// print_transposed_graph_in_stdout(G);
+
+	// printf("vertex dimension: %dbyte\n", (CHAR_BIT*sizeof(vertex))/8);
+	// printf("edge dimension: %dbyte\n", (CHAR_BIT*sizeof(edge))/8);
 
   exit(1);
 }
