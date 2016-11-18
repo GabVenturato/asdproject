@@ -2,12 +2,11 @@
  * Progetto del laboratorio di ASD anno 2015/2016
  */
 
-// ctype.h - used to parse the input (isalnum function)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <limits.h>
+#include <ctype.h>		// to parsing input functions (isalnum)
+#include <limits.h>		// to have the CHAR_BIT const, not essential for project
 
 #define MAX_LABEL_LENGTH 1024
 #define DEFAULT_EDGE_COLOR ""
@@ -48,7 +47,6 @@ typedef struct scc_T {
 	struct vertex_T *root;
 	int id;									// integer identificator for internal purpose
 	bool isreached;					// if SCC is reached
-	int nreach;							// number of (others) SCC reached
 	struct scc_T *next;
 } scc;
 
@@ -69,27 +67,24 @@ void add_element_from_dot_line(char *line, graph *G);
 vertex *add_vertex(graph *G, char *label);
 void add_edge(vertex *from, vertex *to, graph *G, char *color, char *style);
 void print_graph_in_stdout(graph *G, vertex *root, int nedges);
-
-// function for disjoint sets
-// set *make_set(vertex *v);
-// set *find_set(set *x);
-// void union_set(set *x, set *y);
-// void link(set *x, set *y);
-
-// graph visits
+void transpose_graph(graph *G);
 vlist *DFS(graph *G);
 vlist *DFS_visit(graph *G, vertex *u, bool *visited, vlist *ftimevertices);
 sccset *DFS_SCC(graph *Gt, vlist *ftimevertices);
 void DFS_SCC_visit(graph *Gt, vertex *u, bool *visited, scc *sccref);
+sccset *SCC_finder(graph *G);
+void scc_reachability(graph *G);
+vertex *add_missing_edges(graph *G, int *nedges);
 
 // vertices list management
 vlist *vlist_push(vlist *l, vertex *v);
-vertex *vlist_pop(vlist *l);
-void vlist_print(vlist *l);
+void vlist_free(vlist *l);
+void vlist_print(vlist *l); // used in debugging
 
-// graph transposing
-void transpose_graph(graph *G);
+// miscellaneous (for internal or debug use)
 void print_transposed_graph_in_stdout(graph *G);
+void print_scc(sccset *SCCset);
+void print_misc_info();
 
 /* -------------------------- FUNCTIONS DEFINITION -------------------------- */
 /* STDIN description in dot file from stdin
@@ -103,9 +98,9 @@ graph *build_graph_from_stdin() {
   size_t len = 0;
   ssize_t read;
 
-  G->vertices = NULL; // set empty vertices list
+  G->vertices = NULL;						// set empty vertices list
 
-  getline(&line, &len, stdin); // skip first line
+  getline(&line, &len, stdin);	// skip first line
   while((read = getline(&line, &len, stdin)) != -1 ) {
     add_element_from_dot_line(line, G);
   }
@@ -215,28 +210,35 @@ void add_edge(vertex *from, vertex *to, graph *G, char *color, char *style) {
 }
 
 /* @G is a graph
- * PRINT in stdout the graph in dot format
+ * @root is a pointer to a vertex (the root of the solution)
+ * @nedges is an integer representing the number of edges added for the solution
+ * PRINT in stdout the graph in dot format. respecting the project requests.
  */
 void print_graph_in_stdout(graph *G, vertex *root, int nedges) {
 	char color[64], style[64], edge_decoration[256];
 
 	printf("digraph out {\n");
   for( vertex *v = G->vertices; v!=NULL; v=v->next ) {
+		// first of all print the node with its label
 		if( v==root ) {
 			printf("%s [label=\"root=%s; |E'|-|E|=%d\"];\n", v->label, root->label, nedges);
 		} else {
 			printf("%s [label=\"d(%s,%s)=%d\"];\n", v->label, root->label, v->label, 0);
 		}
 
+		// print the node edges, one per line, with its own decorations
 		edge *e = v->edges;
 		while( e!=NULL ) {
+			// clean strings used
 			color[0] = '\0';
 			style[0] = '\0';
 			edge_decoration[0] = '\0';
+			// build decorations based on which attributes are defined in the vertex
 			if( strcmp(e->style, DEFAULT_EDGE_STYLE) ) sprintf(style, "style=%s", e->style);
 			if( strcmp(e->color, DEFAULT_EDGE_COLOR) ) sprintf(color, "color=%s", e->color);
 			if( strlen(color) && strlen(style) ) sprintf(edge_decoration, " [%s, %s]", style, color);
 			else if( strlen(color) || strlen(style) ) sprintf(edge_decoration, " [%s%s]", style, color);
+			// print the edge with decoration built above
       printf("%s -> %s%s;\n", v->label, e->connectsTo->label, edge_decoration);
 			e=e->next;
 		}
@@ -244,55 +246,27 @@ void print_graph_in_stdout(graph *G, vertex *root, int nedges) {
 	printf("}\n");
 }
 
-/* @v is a pointer to a graph vertex
- * RETURN a pointer to the new element of the set
+/* @G is a graph
+ * transpose a graph and save the transposed edges into the list "tedges" stored
+ * in every vertex
  */
-// set *make_set(vertex *v) {
-//   set *x;
-//   x = (set *) malloc(sizeof(set));
-//   x->p = x;
-//   x->v = v;
-// 	v->setnode = x;	// save in the vertex in which element of the set it is saved
-//   x->rank = 0;
-//   return x;
-// }
-
-/* find_set() implements find with path compression
- * @x is a pointer to a set element
- * RETURN the set representative in which the element (pointed by) x is
- */
-// set *find_set(set *x) {
-//   if( x != x->p ) {
-//     x->p = find_set( x->p );
-//   }
-//   return x->p;
-// }
-
-/* union_set() implements union by rank
- * @x,@y are pointers to elements of a disjoint set
- * this function do an union if x and y aren't in the same set
- * link() is used only here by union_set()
- */
-// void union_set(set *x, set *y) {
-//  link( find_set(x), find_set(y) );
-// }
-// void link(set *x, set *y) {
-// 	if( x!=y ) {
-// 		if( x->rank > y->rank ) {
-// 	    y->p = x;
-// 	  } else {
-// 	    x->p = y;
-// 	    if( x->rank == y->rank ) {
-// 	      (y->rank)++;
-// 	    }
-// 	  }
-// 	}
-// }
+void transpose_graph(graph *G) {
+	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
+		for(edge *e=v->edges; e!=NULL; e=e->next) {
+			vertex *u = e->connectsTo;
+			// create the new edge (u,v) and add it in head of u transposed edges list
+		  edge *newedge = (edge *) malloc(sizeof(edge));
+		  newedge->connectsTo = v;
+		  newedge->next = u->tedges;
+		  u->tedges = newedge;
+		}
+	}
+}
 
 /* @G is a graph
  * RETURN the list of vertices ordered by finish visit time
- * this function perform a DFS visit in order to order graph vertices by finish
- * visit time. more details in DFS_visit() description.
+ * this function perform a DFS visit to order graph vertices by finish visit
+ * time. more details in DFS_visit() description.
  * DFS_visit() is used only here to perform the DFS visit
  */
 vlist *DFS(graph *G) {
@@ -338,8 +312,16 @@ vlist *DFS_visit(graph *G, vertex *u, bool *visited, vlist *ftimevertices) {
 	return vlist_push( ftimevertices, u );
 }
 
+/* @Gt is a transposed graph (ie: tedges list correctly filled)
+ * @ftimevertices is a list of vertices ordered by finish time of a DFS visit
+ * RETURN a pointer to a set that contains all scc of the graph G
+ * this function perform a DFS visit in order to find all the SCComponents of
+ * the graph G. every scc has an unique id (uniqueness guaranteed by global
+ * scc counter).
+ * DFS_SCC_visit() is used only here to perform DFS_SCC visit
+ */
 sccset *DFS_SCC(graph *Gt, vlist *ftimevertices) {
-	bool visited[totvertices];		// keep track of visited vertices (here use id)
+	bool visited[totvertices];	// keep track of visited vertices (here use id)
 	sccset *SCCset = (sccset *) malloc(sizeof(sccset));
 	SCCset->sccomponents = NULL;
 	vertex *u;
@@ -349,14 +331,17 @@ sccset *DFS_SCC(graph *Gt, vlist *ftimevertices) {
 		visited[i] = false;
 	}
 
-	vlist *li = ftimevertices;	// use the list of vertices ordered by finish visit time
+	vlist *li = ftimevertices;	// use vertices list ordered by finish visit time
 	while( li!=NULL ) {
 		u = li->v;
 		if( !visited[u->id] ) {
+			// build the scc with its root vertex
 			scc *s = (scc *) malloc(sizeof(scc));
 			s->root = u;
 			s->id = totscc;
-			u->sccref = s;
+			u->sccref = s;					// store in vertex in which scc it is
+			s->isreached = false;		// set all scc as "not reached" (field used later)
+			// save the scc just created into the scc set
 			s->next = SCCset->sccomponents;
 			SCCset->sccomponents = s;
 			totscc++;
@@ -368,16 +353,107 @@ sccset *DFS_SCC(graph *Gt, vlist *ftimevertices) {
 	return SCCset;
 }
 
+/* @Gt is a transposed graph (ie: tedges list correctly filled)
+ * @u is the vertex analyzed by this DFS_SCC_visit call
+ * @visited is the array that keep track of visited vertices
+ * @sccref is the scc in which all vertices will be put (note that during
+ *         DFS_SCC_visit() execution can't be created new SCComponents)
+ * this function perform a DFS_visit that puts all vertices in the appropriate
+ * scc that is passed from DFS_SCC main function.
+ */
 void DFS_SCC_visit(graph *Gt, vertex *u, bool *visited, scc *sccref) {
 	visited[u->id] = true;
 
 	for(edge *e=u->tedges; e!=NULL; e=e->next) {
 		vertex *v = e->connectsTo;
 		if( !visited[v->id] ) {
-			v->sccref = sccref;
+			v->sccref = sccref;	// add vertex to its own scc
 			DFS_SCC_visit(Gt, v, visited, sccref);
 		}
 	}
+}
+
+/* @G is a graph
+ * RETURN a set containing all SCComponents of the graph G
+ * this function simply put together other functions. see their description for
+ * more details.
+ */
+sccset *SCC_finder(graph *G) {
+	vlist *ftimevertices = DFS(G);
+	transpose_graph(G);
+	return DFS_SCC(G, ftimevertices);
+}
+
+/* @G is a graph in which scc are already discovered and saved in the specific
+ *    data structure
+ * this function check which scc are not reached from any vertex in other scc.
+ * this info will be used to connect scc not reached from anyone (if exists),
+ * and so to solve the problem.
+ */
+void scc_reachability(graph *G) {
+	scc *i, *j;
+
+	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
+		i = v->sccref;						// retreive the scc in which v is
+		for(edge *e=v->edges; e!=NULL; e=e->next) {
+			vertex *u = e->connectsTo;
+			j = u->sccref; 					// retreive the scc in which u is
+
+			// note that (v,u) is the edge analyzed
+			if( i!=j ) {						// if they aren't in the same scc
+				j->isreached = true;	// scc of u is reached from another one
+			}
+		}
+	}
+}
+
+/* @G is a graph
+ * @nedges is a pointer to an integer in which will be saved the number of
+ *         vertices added
+ * RETURN the root vertex
+ * this function add missing edges to the graph in order to eventually have a
+ * graph G which admits root (see definition in project pdf).
+ */
+vertex *add_missing_edges(graph *G, int *nedges) {
+	vertex *root, *v;
+	vlist *scc_not_reached=NULL, *li;
+	scc *s;
+	bool already_in[totscc];	// to check if a scc is already in scc_not_reached
+
+	scc_reachability(G);			// set reachability flags in graph
+
+	// set that any vertex is already in the list
+	for(int i=0; i<totscc; i++) already_in[i] = false;
+
+	// put the scc root vertex in the list if it is not reached and not already in
+	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
+		s = v->sccref;
+		if( !s->isreached && !already_in[s->id] ) {
+			scc_not_reached = vlist_push(scc_not_reached, s->root);
+			already_in[s->id] = true;
+		}
+	}
+
+	li = scc_not_reached;
+	if( li!=NULL ) {
+		// choose as graph root the first not reached vertex
+		root = li->v;
+		li = li->next;
+
+		// add edges (root,v) for each v not reached (if exists)
+		*nedges = 0;
+		while( li!=NULL ) {
+			v = li->v;
+			if( v!=root ) {
+				add_edge(root, v, G, "red", DEFAULT_EDGE_STYLE);
+				(*nedges)++;
+			}
+			li = li->next;
+		}
+	}
+
+	vlist_free(scc_not_reached);
+	return root;
 }
 
 /* @l is a pointer to the head of the list
@@ -394,45 +470,25 @@ vlist *vlist_push(vlist *l, vertex *v) {
 }
 
 /* @l is a pointer to the head of the list
- * RETURN a pointer to the vertex extracted
- * this function extract elements from the head
+ * this (ecological) function free the memory occupied by a list
  */
-// vertex *vlist_pop(vlist *l) {
-// 	vertex *v = NULL;
-// 	vlist* tmp;
-// 	if( l!=NULL ) {
-// 		v = l->v;
-// 		tmp = l;
-// 		l = l->next;
-// 	}
-// 	free(tmp);	// free memory occupied from removed element
-// 	return v;
-// }
+void vlist_free(vlist *l) {
+	vlist* tmp;
+	while( l!=NULL ) {
+		tmp = l;
+		l = l->next;
+		free(tmp);
+	}
+}
 
 /* @l is a pointer to the head of the list
+ * not used to solve the problem. debugging use
  */
 void vlist_print(vlist *l) {
 	for(vlist *p=l; p!=NULL; p=p->next) {
 		printf("%s(%d) ", (p->v)->label, (p->v)->id);
 	}
 	printf("\n");
-}
-
-/* @G is a graph
- * transpose a graph and save the transposed edges into the list "tedges" stored
- * in every vertex
- */
-void transpose_graph(graph *G) {
-	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
-		for(edge *e=v->edges; e!=NULL; e=e->next) {
-			vertex *u = e->connectsTo;
-			// create the new edge (u,v) and add it in head of u transposed edges list
-		  edge *newedge = (edge *) malloc(sizeof(edge));
-		  newedge->connectsTo = v;
-		  newedge->next = u->tedges;
-		  u->tedges = newedge;
-		}
-	}
 }
 
 /* @G is a graph
@@ -457,58 +513,9 @@ void print_transposed_graph_in_stdout(graph *G) {
 	printf("}\n");
 }
 
-void scc_reachability(graph *G) {
-	scc *i, *j;
-
-	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
-		i = v->sccref;
-		for(edge *e=v->edges; e!=NULL; e=e->next) {
-			vertex *u = e->connectsTo;
-			j = u->sccref;
-
-			if( i!=j ) {
-				j->isreached = true;
-				(i->nreach)++;
-			}
-		}
-	}
-}
-
-vertex *add_missing_edges(graph *G, int *nedges) {
-	vertex *root, *v;
-	vlist *scc_not_reached=NULL, *li;
-	int maxnreach=0;
-	scc *s;
-	bool already_in[totscc];
-
-	for(int i=0; i<totscc; i++) already_in[i] = false;
-
-	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
-		s = v->sccref;
-		if( s->nreach > maxnreach ) {
-			maxnreach = s->nreach;
-			root = v;
-		}
-		if( !s->isreached && !already_in[s->id] ) {
-			scc_not_reached = vlist_push(scc_not_reached, s->root);
-			already_in[s->id] = true;
-		}
-	}
-
-	li = scc_not_reached;
-	*nedges = 0;
-	while( li!=NULL ) {
-		v = li->v;
-		if( v!=root ) {
-			add_edge(root, v, G, "red", DEFAULT_EDGE_STYLE);
-			(*nedges)++;
-		}
-		li = li->next;
-	}
-
-	return root;
-}
-
+/* @SCCset is a set of SCComponents
+ * function used only for debugging
+ */
 void print_scc(sccset *SCCset) {
 	printf("SCC founded:\n");
 	for(scc *s=SCCset->sccomponents; s!=NULL; s=s->next) {
@@ -517,27 +524,27 @@ void print_scc(sccset *SCCset) {
 	printf("\n");
 }
 
+/* this function print in stdout the approximated sizes (in byte) of one vertex
+ * and one edge.
+ * calculus details:
+ * sizeof() returns the dimension in CHAR_BIT units (number of char occupied)
+ * CHAR_BIT is the dimension of a char in bit
+ * [(char dimension in bit) * (number of char occupied)]/8
+ * because of byte=8bit the result is in byte
+ */
+void print_misc_info() {
+	printf("vertex dimension: %dbyte\n", (CHAR_BIT*sizeof(vertex))/8);
+	printf("edge dimension: %dbyte\n", (CHAR_BIT*sizeof(edge))/8);
+}
+
 /* ---------------------------------- MAIN ---------------------------------- */
 void main(int argc, char **argv) {
+	int nedges;
 
   graph *G = build_graph_from_stdin();
-  vlist *ftimevertices = DFS(G);
-	transpose_graph(G);
-	sccset *SCCset = DFS_SCC(G, ftimevertices);
-	scc_reachability(G);
-	int nedges;
+  sccset *SCCset = SCC_finder(G);
 	vertex *root = add_missing_edges(G, &nedges);
 	print_graph_in_stdout(G, root, nedges);
-
-	// vlist *ftimevisit = DFS(G);
-	// vlist_print(ftimevisit);
-
-	// printf("\n");
-	// transpose_graph(G);
-	// print_transposed_graph_in_stdout(G);
-
-	// printf("vertex dimension: %dbyte\n", (CHAR_BIT*sizeof(vertex))/8);
-	// printf("edge dimension: %dbyte\n", (CHAR_BIT*sizeof(edge))/8);
 
   exit(1);
 }

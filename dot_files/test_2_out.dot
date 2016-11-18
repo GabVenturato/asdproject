@@ -1,0 +1,16 @@
+digraph out {
+d [label="root=d; |E'|-|E|=0"];
+d -> e;
+d -> a;
+a [label="d(d,a)=0"];
+e [label="d(d,e)=0"];
+e -> a;
+e -> f;
+b [label="d(d,b)=0"];
+b -> d;
+c [label="d(d,c)=0"];
+c -> e;
+c -> b;
+f [label="d(d,f)=0"];
+f -> c;
+}
