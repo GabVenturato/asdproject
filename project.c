@@ -60,6 +60,13 @@ typedef struct vlist_T {
 	struct vlist_T *next;
 } vlist;
 
+// vertices queue (used by BFS)
+typedef struct vqueue_T {
+	struct vertex_T *v;
+	struct vqueue_T *next;
+	struct vqueue_T *last;	// keep the pointer to the last, to do push in O(1)
+} vqueue;
+
 
 /* -------------------------- FUNCTIONS DECLARATION ------------------------- */
 graph *build_graph_from_stdin();
@@ -75,11 +82,16 @@ void DFS_SCC_visit(graph *Gt, vertex *u, bool *visited, scc *sccref);
 sccset *SCC_finder(graph *G);
 void scc_reachability(graph *G);
 vertex *add_missing_edges(graph *G, int *nedges);
+void BFS(graph *G, vertex *s);
 
 // vertices list management
 vlist *vlist_push(vlist *l, vertex *v);
 void vlist_free(vlist *l);
 void vlist_print(vlist *l); // used in debugging
+
+// vertices queue management
+void vqueue_push(vqueue **q, vertex *v);
+vertex *vqueue_pop(vqueue **q);
 
 // miscellaneous (for internal or debug use)
 void print_transposed_graph_in_stdout(graph *G);
@@ -184,7 +196,8 @@ vertex *add_vertex(graph *G, char *label) {
   // if not present create vertex, fill it with appropriate information, and add
   vertex *v = (vertex *) malloc(sizeof(vertex));
   strcpy(v->label, label);
-	v->id = totvertices; // use the current number of total edges as identifier
+	v->id = totvertices;	// use the current number of total edges as identifier
+	v->depth = -1;				// default value for depth is -1
   // attach it to G, at the top of vertices list
 	v->next = G->vertices;
 	G->vertices = v;
@@ -223,7 +236,7 @@ void print_graph_in_stdout(graph *G, vertex *root, int nedges) {
 		if( v==root ) {
 			printf("%s [label=\"root=%s; |E'|-|E|=%d\"];\n", v->label, root->label, nedges);
 		} else {
-			printf("%s [label=\"d(%s,%s)=%d\"];\n", v->label, root->label, v->label, 0);
+			printf("%s [label=\"d(%s,%s)=%d\"];\n", v->label, root->label, v->label, v->depth);
 		}
 
 		// print the node edges, one per line, with its own decorations
@@ -456,6 +469,39 @@ vertex *add_missing_edges(graph *G, int *nedges) {
 	return root;
 }
 
+/* @G is a graph
+ * @s is the source vertex for BFS visit
+ * this function perform a BFS visit in order to find the shortest-paths tree
+ * rooted in s. it also calculate de depth for each node in the shortest-paths
+ * tree.
+ * it uses the queue data structure, see vqueue functions for more details.
+ */
+void BFS(graph *G, vertex *s) {
+	bool visited[totvertices];	// keep track of visited vertices (here use id)
+	vqueue *q=NULL;
+
+	// set all vertices as "not visited"
+	for(int i=0; i<totvertices; i++) {
+		visited[i] = false;
+	}
+
+	visited[s->id] = true;
+	s->depth = 0;
+	vqueue_push(&q,s);
+	while( q!=NULL ) {
+		vertex *u = vqueue_pop(&q);
+		for(edge *e=u->edges; e!=NULL; e=e->next) {
+			vertex *v = e->connectsTo;
+			if( !visited[v->id] ) {
+				visited[v->id] = true;
+				v->depth = u->depth +1;
+				strcpy(e->style, "dashed");
+				vqueue_push(&q,v);
+			}
+		}
+	}
+}
+
 /* @l is a pointer to the head of the list
  * @v is a pointer to a graph vertex
  * RETURN the list with the new element added
@@ -489,6 +535,44 @@ void vlist_print(vlist *l) {
 		printf("%s(%d) ", (p->v)->label, (p->v)->id);
 	}
 	printf("\n");
+}
+
+/* @q is a pointer to the head of the queue
+ * @v is the vertex to push in
+ * this function push the new element ad the end (tail) of the queue. it updates
+ * the "last" parameter only in the head of the queue.
+ */
+void vqueue_push(vqueue **q, vertex *v) {
+	vqueue *el = (vqueue *) malloc(sizeof(vqueue));
+	el->v = v;
+	el->next = NULL;
+	el->last = el;
+	if( *q==NULL ) {	// if the queue is empty
+		*q = el;
+	} else {					// else update the two pointers to store the new element
+		(*q)->last->next = el;
+		(*q)->last = el;
+	}
+}
+
+/* @q is a pointer to the head of the queue
+ * RETURN the vertex removed from the queue
+ * this function remove the first element of the queue (from the head). it keeps
+ * updated the pointer to the last element only in the head of the queue.
+ * it also takes care to free the memory of the removed element.
+ */
+vertex *vqueue_pop(vqueue **q) {
+	vertex *v = NULL;
+	vqueue *f = NULL;
+	if( (*q)!=NULL ) {
+		v = (*q)->v;
+		if( (*q)->next!=NULL )
+			(*q)->next->last = (*q)->last;	// update the pointer to the last queue el
+		f = *q;														// save the head pointer to free memory
+		(*q) = (*q)->next;
+		free(f);
+	}
+	return v;
 }
 
 /* @G is a graph
@@ -544,6 +628,7 @@ void main(int argc, char **argv) {
   graph *G = build_graph_from_stdin();
   sccset *SCCset = SCC_finder(G);
 	vertex *root = add_missing_edges(G, &nedges);
+	BFS(G, root);
 	print_graph_in_stdout(G, root, nedges);
 
   exit(1);
