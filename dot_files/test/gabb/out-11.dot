@@ -1,9 +1,0 @@
-digraph out {
-c [label="d(a,c)=2"];
-b [label="d(a,b)=1"];
-b -> c [style=dashed];
-d [label="d(a,d)=1"];
-a [label="root=a; |E'|-|E|=1"];
-a -> b [style=dashed, color=red];
-a -> d [style=dashed];
-}
