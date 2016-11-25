@@ -2,7 +2,7 @@
 clear
 path="./dot_files/test"
 mkdir $path/$1
-for i in {1..25}
+for i in {1..50}
 do
 echo "run test on in-$i.dot"
 $2 $3 < $path/in-$i.dot > $path/$1/out-$i.dot

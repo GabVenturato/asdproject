@@ -1,0 +1,22 @@
+digraph out {
+n3 [label="d(a,n3)=1"];
+n2 [label="d(a,n2)=1"];
+g [label="d(a,g)=5"];
+g -> c;
+g -> d;
+eo [label="d(a,eo)=4"];
+eo -> g [style=dashed];
+n1 [label="d(a,n1)=1"];
+c [label="d(a,c)=2"];
+c -> d [style=dashed];
+d [label="d(a,d)=3"];
+d -> eo [style=dashed];
+d -> b;
+b [label="d(a,b)=1"];
+b -> c [style=dashed];
+a [label="root=a; |E'|-|E|=3"];
+a -> n3 [style=dashed, color=red];
+a -> n2 [style=dashed, color=red];
+a -> n1 [style=dashed, color=red];
+a -> b [style=dashed];
+}

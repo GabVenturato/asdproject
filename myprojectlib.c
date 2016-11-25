@@ -161,6 +161,8 @@ void add_edge(vertex *from, vertex *to, graph *G, char *color, char *style) {
  * @root is a pointer to a vertex (the root of the solution)
  * @nedges is an integer representing the number of edges added for the solution
  * PRINT in stdout the graph in dot format. respecting the project requests.
+ * NOTE: the output could be in a better format using a BFS visit, starting from
+ * root vertex, to print out the graph.
  */
 void print_graph_in_stdout(graph *G, vertex *root, int nedges) {
 	char color[64], style[64], edge_decoration[256];

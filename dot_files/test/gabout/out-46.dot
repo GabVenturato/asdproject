@@ -1,0 +1,14 @@
+digraph out {
+b [label="d(j,b)=2"];
+a [label="d(j,a)=1"];
+a -> c [style=dashed];
+a -> b [style=dashed];
+k [label="d(j,k)=1"];
+j [label="root=j; |E'|-|E|=2"];
+j -> a [style=dashed, color=red];
+j -> k [style=dashed, color=red];
+c [label="d(j,c)=2"];
+c -> d [style=dashed];
+d [label="d(j,d)=3"];
+d -> c;
+}

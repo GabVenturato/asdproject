@@ -1,0 +1,9 @@
+digraph out {
+k [label="d(f,k)=1"];
+l [label="d(f,l)=2"];
+a [label="d(f,a)=1"];
+a -> l [style=dashed];
+f [label="root=f; |E'|-|E|=2"];
+f -> k [style=dashed, color=red];
+f -> a [style=dashed, color=red];
+}

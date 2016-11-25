@@ -1,0 +1,11 @@
+digraph out {
+bianconera [label="d(culo,bianconera)=1"];
+figa [label="d(culo,figa)=1"];
+tette [label="d(culo,tette)=2"];
+e [label="d(culo,e)=1"];
+e -> tette [style=dashed];
+culo [label="root=culo; |E'|-|E|=3"];
+culo -> bianconera [style=dashed, color=red];
+culo -> figa [style=dashed, color=red];
+culo -> e [style=dashed, color=red];
+}
