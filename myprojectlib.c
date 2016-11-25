@@ -19,12 +19,11 @@ graph *build_graph_from_stdin() {
   graph *G = (graph *) malloc(sizeof(graph));
   char *line = NULL;
   size_t len = 0;
-  ssize_t read;
 
   G->vertices = NULL;						// set empty vertices list
 
   getline(&line, &len, stdin);	// skip first line
-  while((read = getline(&line, &len, stdin)) != -1 ) {
+  while(getline(&line, &len, stdin) != -1 ) {
     add_element_from_dot_line(line, G);
   }
 

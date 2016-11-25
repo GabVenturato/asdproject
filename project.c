@@ -15,5 +15,5 @@ void main(int argc, char **argv) {
 	BFS(G, root);
 	print_graph_in_stdout(G, root, nedges);
 
-  exit(1);
+  exit(0);
 }
