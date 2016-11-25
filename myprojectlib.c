@@ -36,7 +36,7 @@ graph *build_graph_from_stdin() {
  * The dot file is needed to be in a specific format. (see project assignment
  * description).
  */
-graph *build_graph_from_file(char *filename) {
+graph *build_graph_from_file(FILE *fp) {
   graph *G = (graph *) malloc(sizeof(graph));
   char *line = NULL;
   size_t len = 0;
@@ -44,13 +44,10 @@ graph *build_graph_from_file(char *filename) {
   G->vertices = NULL;						// set empty vertices list
 	totvertices = 0;							// clean total number of vertices
 	totscc = 0;										// clean total number of scc
-
-	FILE *fp = fopen(filename, "r");
-  getline(&line, &len, fp);	// skip first line
+	getline(&line, &len, fp);			// skip first line
   while(getline(&line, &len, fp) != -1 ) {
     add_element_from_dot_line(line, G);
   }
-	fclose(fp);
 
   free(line);
   return G;
@@ -135,6 +132,9 @@ vertex *add_vertex(graph *G, char *label) {
 	v->depth = -1;				// default value for depth is -1
   // attach it to G, at the top of vertices list
 	v->next = G->vertices;
+	v->edges = NULL;
+	v->tedges = NULL;
+	v->sccref = NULL;
 	G->vertices = v;
 	totvertices++;
   return v;

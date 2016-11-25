@@ -217,11 +217,14 @@ resrow *misurazione(void (*prepara)(int N), int d, int n, double za, double tMin
  */
 void projectsolver() {
 	int nedges;
+	FILE *fp = fopen(INPUT_FILENAME, "r");
 
-  // graph *G = build_graph_from_stdin();
-  // sccset *SCCset = SCC_finder(G);
-	// vertex *root = add_missing_edges(G, &nedges);
-	// BFS(G, root);
+  graph *G = build_graph_from_file(fp);
+  sccset *SCCset = SCC_finder(G);
+	vertex *root = add_missing_edges(G, &nedges, SCCset);
+	BFS(G, root);
+
+	fclose(fp);
 }
 
 /* @n graph dimension (number of vertices)

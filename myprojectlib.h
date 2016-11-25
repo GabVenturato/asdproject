@@ -69,7 +69,7 @@ typedef struct vqueue_T {
 
 /* -------------------------- FUNCTIONS DECLARATION ------------------------- */
 graph *build_graph_from_stdin();
-graph *build_graph_from_file(char *filename);
+graph *build_graph_from_file(FILE *fp);
 void add_element_from_dot_line(char *line, graph *G);
 vertex *add_vertex(graph *G, char *label);
 void add_edge(vertex *from, vertex *to, graph *G, char *color, char *style);
