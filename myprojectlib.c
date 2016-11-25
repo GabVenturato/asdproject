@@ -31,6 +31,31 @@ graph *build_graph_from_stdin() {
   return G;
 }
 
+/* @filename filename of a dot file where there is the input
+ * RETURN graph filled with dot file information
+ * The dot file is needed to be in a specific format. (see project assignment
+ * description).
+ */
+graph *build_graph_from_file(char *filename) {
+  graph *G = (graph *) malloc(sizeof(graph));
+  char *line = NULL;
+  size_t len = 0;
+
+  G->vertices = NULL;						// set empty vertices list
+	totvertices = 0;							// clean total number of vertices
+	totscc = 0;										// clean total number of scc
+
+	FILE *fp = fopen(filename, "r");
+  getline(&line, &len, fp);	// skip first line
+  while(getline(&line, &len, fp) != -1 ) {
+    add_element_from_dot_line(line, G);
+  }
+	fclose(fp);
+
+  free(line);
+  return G;
+}
+
 /* @line is a string representing a line of the dot file
  * @G is the graph where to put information retreived from the line
  * this function scan character per character the line passed as parameter, when
@@ -305,6 +330,7 @@ sccset *SCC_finder(graph *G) {
 	vlist *ftimevertices = DFS(G);
 	transpose_graph(G);
 	return DFS_SCC(G, ftimevertices);
+	vlist_free(ftimevertices);	// clean memory used by ftimevertices list
 }
 
 /* @G is a graph in which scc are already discovered and saved in the specific
@@ -336,25 +362,17 @@ void scc_reachability(graph *G) {
  * RETURN the root vertex
  * this function add missing edges to the graph in order to eventually have a
  * graph G which admits root (see definition in project pdf).
+ * NOTE: it could be improved removing the auxiliary list "scc_not_reached"
  */
-vertex *add_missing_edges(graph *G, int *nedges) {
-	vertex *root, *v;
+vertex *add_missing_edges(graph *G, int *nedges, sccset *SCCset) {
+	vertex *root=NULL, *v;
 	vlist *scc_not_reached=NULL, *li;
-	scc *s;
-	bool already_in[totscc];	// to check if a scc is already in scc_not_reached
 
 	scc_reachability(G);			// set reachability flags in graph
 
-	// set that any vertex is already in the list
-	for(int i=0; i<totscc; i++) already_in[i] = false;
-
-	// put the scc root vertex in the list if it is not reached and not already in
-	for(vertex *v=G->vertices; v!=NULL; v=v->next) {
-		s = v->sccref;
-		if( !s->isreached && !already_in[s->id] ) {
-			scc_not_reached = vlist_push(scc_not_reached, s->root);
-			already_in[s->id] = true;
-		}
+	// put the scc root vertex in the list if it is not reached
+	for(scc *s=SCCset->sccomponents; s!=NULL; s=s->next) {
+		if( !s->isreached ) scc_not_reached = vlist_push(scc_not_reached, s->root);
 	}
 
 	li = scc_not_reached;
@@ -390,23 +408,25 @@ void BFS(graph *G, vertex *s) {
 	bool visited[totvertices];	// keep track of visited vertices (here use id)
 	vqueue *q=NULL;
 
-	// set all vertices as "not visited"
-	for(int i=0; i<totvertices; i++) {
-		visited[i] = false;
-	}
+	if( s!=NULL ) {							// if the input graph is empty
+		// set all vertices as "not visited"
+		for(int i=0; i<totvertices; i++) {
+			visited[i] = false;
+		}
 
-	visited[s->id] = true;
-	s->depth = 0;
-	vqueue_push(&q,s);
-	while( q!=NULL ) {
-		vertex *u = vqueue_pop(&q);
-		for(edge *e=u->edges; e!=NULL; e=e->next) {
-			vertex *v = e->connectsTo;
-			if( !visited[v->id] ) {
-				visited[v->id] = true;
-				v->depth = u->depth +1;
-				strcpy(e->style, "dashed");
-				vqueue_push(&q,v);
+		visited[s->id] = true;
+		s->depth = 0;
+		vqueue_push(&q,s);
+		while( q!=NULL ) {
+			vertex *u = vqueue_pop(&q);
+			for(edge *e=u->edges; e!=NULL; e=e->next) {
+				vertex *v = e->connectsTo;
+				if( !visited[v->id] ) {
+					visited[v->id] = true;
+					v->depth = u->depth +1;
+					strcpy(e->style, "dashed");
+					vqueue_push(&q,v);
+				}
 			}
 		}
 	}

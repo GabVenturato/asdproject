@@ -1,0 +1,6 @@
+digraph out {
+b [label="root=b; |E'|-|E|=0"];
+b -> a [style=dashed];
+a [label="d(b,a)=1"];
+a -> b;
+}

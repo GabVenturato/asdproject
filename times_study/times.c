@@ -11,6 +11,7 @@
 #include "../myprojectlib.h"
 
 #define K 0.05	// error tolerance
+#define INPUT_FILENAME "input.dot"
 
 typedef enum { worst, average, best, wrongcase } graphcase;
 
@@ -211,7 +212,7 @@ resrow *misurazione(void (*prepara)(int N), int d, int n, double za, double tMin
 
 /* This is the algorithm that solve the problem in the project file.
  * Only two differences:
- * - it takes the input from a file ("input.dot") and not stdin
+ * - it takes the input from a file (filname defined as costant) and not stdin
  * - it doesn't print out the output graph
  */
 void projectsolver() {
@@ -227,7 +228,7 @@ void projectsolver() {
  * this function generates the worst case graph: complete graph
  */
 void create_graph_worst(int n) {
-  FILE *fp = fopen("input.dot","w");
+  FILE *fp = fopen(INPUT_FILENAME,"w");
 
   fprintf(fp, "graph G {\n");
   for(int i=0; i<n; i++) {

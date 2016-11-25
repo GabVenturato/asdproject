@@ -69,6 +69,7 @@ typedef struct vqueue_T {
 
 /* -------------------------- FUNCTIONS DECLARATION ------------------------- */
 graph *build_graph_from_stdin();
+graph *build_graph_from_file(char *filename);
 void add_element_from_dot_line(char *line, graph *G);
 vertex *add_vertex(graph *G, char *label);
 void add_edge(vertex *from, vertex *to, graph *G, char *color, char *style);
@@ -80,7 +81,7 @@ sccset *DFS_SCC(graph *Gt, vlist *ftimevertices);
 void DFS_SCC_visit(graph *Gt, vertex *u, bool *visited, scc *sccref);
 sccset *SCC_finder(graph *G);
 void scc_reachability(graph *G);
-vertex *add_missing_edges(graph *G, int *nedges);
+vertex *add_missing_edges(graph *G, int *nedges, sccset *SCCset);
 void BFS(graph *G, vertex *s);
 
 // vertices list management

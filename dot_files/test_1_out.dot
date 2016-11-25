@@ -1,12 +1,12 @@
 digraph out {
-f [label="d(a,f)=0"];
-d [label="d(a,d)=0"];
-c [label="d(a,c)=0"];
-b [label="d(a,b)=0"];
+f [label="d(a,f)=1"];
+d [label="d(a,d)=1"];
+c [label="d(a,c)=1"];
+b [label="d(a,b)=1"];
 b -> d;
 a [label="root=a; |E'|-|E|=1"];
-a -> f [color=red];
-a -> d;
-a -> c;
-a -> b;
+a -> f [style=dashed, color=red];
+a -> d [style=dashed];
+a -> c [style=dashed];
+a -> b [style=dashed];
 }

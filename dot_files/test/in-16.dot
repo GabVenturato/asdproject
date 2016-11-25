@@ -1,0 +1,7 @@
+digraph mio_grafo {
+c -> f;
+a -> f;
+f->b;
+x -> z;
+z -> b;
+}
