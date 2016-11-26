@@ -37,7 +37,7 @@ void projectsolver();
 void create_graph_worst(int n);
 void create_graph_average(int n);
 void create_graph_best(int n);
-void times_test(void (*prepara)(int N), double tMin, char *filename);
+void times_test(void (*prepara)(int N), char *filename);
 graphcase get_graphcase(char *gc);
 
 /* -------------------------- FUNCTIONS DEFINITION -------------------------- */
@@ -197,12 +197,10 @@ resrow *misurazione(void (*prepara)(int N), int d, int n, double za, double tMin
     }
 
     cn += n;
-    printf("\nStampa cn %d\n", cn);
     e = t/cn;
     s = sqrt(sum2/cn-(e*e));
     delta = (1/(sqrt(cn))) * za * s;
   } while(delta > D);
-  printf("\nE=%f delta %f\n", e, delta);
 
   res = (resrow *) malloc(sizeof(resrow));
   res->e = e;
@@ -240,34 +238,75 @@ void create_graph_worst(int n) {
     }
   }
   fprintf(fp,"}");
+
   fclose(fp);
 }
 
+/* @n graph dimension (number of vertices)
+ * this function generates the average case graph: randomly built graph
+ */
 void create_graph_average(int n) {
+	FILE *fp = fopen(INPUT_FILENAME,"w");
 
+  fprintf(fp, "graph G {\n");
+  for(int i=0; i<n; i++) {
+		fprintf(fp, "%d;\n", i);
+    for(int j=0; j<n; j++) {
+			double r = myrandom_next();
+			if( r < 0.5 ) {
+				fprintf(fp, "%d->%d;\n", i, j);
+			}
+    }
+  }
+  fprintf(fp,"}");
+
+  fclose(fp);
 }
 
+/* @n graph dimension (number of vertices)
+ * this function generates the best case graph: a graph without edges
+ */
 void create_graph_best(int n) {
+	FILE *fp = fopen(INPUT_FILENAME,"w");
 
+  fprintf(fp, "graph G {\n");
+  for(int i=0; i<n; i++) {
+    fprintf(fp, "%d;\n", i);
+  }
+  fprintf(fp,"}");
+
+  fclose(fp);
 }
 
 /* @prepara pointer to a function which prepare the input of dimension N
  * @tMin minimum execution time needed to maintain the error<=K
  * @filename for the output data
- * this function execute misurazione() from 5 to 200 vertices as input dimension
- * passed to prepara() function. it needs to start from a number >1 becouse of
- * the variance calculation.
+ * this function execute misurazione() from 0 to 200 vertices as input dimension
+ * passed to prepara() function.
  */
-void times_test(void (*prepara)(int N), double tMin, char *filename) {
+void times_test(void (*prepara)(int N), char *filename) {
   resrow *r;
-  FILE *fp = fopen(filename, "w");
+	double g,tMin;
+	int cn=20, maxn=50;
 
-  for(int i=5; i<=50; i++) {
-    r = misurazione(prepara, i, 20, 1.96, tMin, 0.02);
-    fprintf(fp, "%d  %f  %f\n", i, r->e, r->delta);
+	myrandom_init(123456789);
 
-    printf("\nripetizione %d\n\tmedia: %f\n\tdelta: %f\n", i, r->e, r->delta);
+	g = granularita();
+	tMin = g/K;
+	printf("\nGranularity: %f\ntMin calculated: %f\n", g, tMin);
+	printf("\nTest in input which dimension from 0 to %d\n", maxn);
+	printf("For each step of dimension, perform the test in a set of %d elements.\n", cn);
+
+	FILE *fp = fopen(filename, "w");
+
+  for(int i=5; i<=maxn; i++) {
+    r = misurazione(prepara, i, cn, 1.96, tMin, 0.02);
+    fprintf(fp, "%d %f %f\n", i, r->e, r->delta);
+
+    printf("\nN %d/%d\n\tE: %f\tdelta: %f\n", i, maxn, r->e, r->delta);
   }
+
+	printf("\n\nTest completed! Results saved in \"%s\"\n\n", filename);
 
   fclose(fp);
 }
@@ -285,26 +324,20 @@ graphcase get_graphcase(char *gc) {
 
 /* ---------------------------------- MAIN ---------------------------------- */
 void main(int argc, char **argv) {
-	double g,tMin;
 
 	if( argc != 2 ) {
 		printf("Error! Program usage: ./times <graphcase>\nwhere graphcase is one of: worst, average, best\n\n");
 		exit(1);
 	} else {
-	  g = granularita();
-	  tMin = g/K;
-	  printf("\nGranularità: %f\ntMin calcolato: %f \n", g, tMin);
-	  myrandom_init(123456789);
-
 		switch ( get_graphcase(argv[1]) ) {
 			case worst:
-				times_test(create_graph_worst, tMin, "worst.txt");
+				times_test(create_graph_worst, "worst.txt");
 				break;
 			case average:
-				times_test(create_graph_average, tMin, "average.txt");
+				times_test(create_graph_average, "average.txt");
 				break;
 			case best:
-				times_test(create_graph_best, tMin, "best.txt");
+				times_test(create_graph_best, "best.txt");
 				break;
 			default:
 				printf("\n\nError! Program usage: ./times <graphcase>\nwhere graphcase is one of: worst, average, best\n\n");
