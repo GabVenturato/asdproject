@@ -88,9 +88,11 @@ double granularita() {
  */
 double tempoMedioNetto(void (*prepara)(int N), int d, double tMin) {
   int ripTara=0, ripLordo=0;
-  double t0, t1, tara, lordo, tmedio;
+  double t0, t1, tara, lordo;
   ripTara = calcolaRipTara(prepara, d, tMin);
   ripLordo = calcolaRipLordo(prepara, d, tMin);
+
+	printf("\nripTara: %d\tripLordo: %d", ripTara, ripLordo);
 
   t0 = clock();
   for(int i=0; i<ripTara; i++) (*prepara)(d);
@@ -281,13 +283,13 @@ void create_graph_best(int n) {
 /* @prepara pointer to a function which prepare the input of dimension N
  * @tMin minimum execution time needed to maintain the error<=K
  * @filename for the output data
- * this function execute misurazione() from 0 to 200 vertices as input dimension
+ * this function execute misurazione() from 0 to 300 vertices as input dimension
  * passed to prepara() function.
  */
 void times_test(void (*prepara)(int N), char *filename) {
   resrow *r;
 	double g,tMin;
-	int cn=20, maxn=50;
+	int cn=20, maxn=300;
 
 	myrandom_init(123456789);
 
@@ -299,7 +301,7 @@ void times_test(void (*prepara)(int N), char *filename) {
 
 	FILE *fp = fopen(filename, "w");
 
-  for(int i=5; i<=maxn; i++) {
+  for(int i=0; i<=maxn; i++) {
     r = misurazione(prepara, i, cn, 1.96, tMin, 0.02);
     fprintf(fp, "%d %f %f\n", i, r->e, r->delta);
 
@@ -323,11 +325,11 @@ graphcase get_graphcase(char *gc) {
 }
 
 /* ---------------------------------- MAIN ---------------------------------- */
-void main(int argc, char **argv) {
+int main(int argc, char **argv) {
 
 	if( argc != 2 ) {
 		printf("Error! Program usage: ./times <graphcase>\nwhere graphcase is one of: worst, average, best\n\n");
-		exit(1);
+		return 1;
 	} else {
 		switch ( get_graphcase(argv[1]) ) {
 			case worst:
@@ -341,9 +343,9 @@ void main(int argc, char **argv) {
 				break;
 			default:
 				printf("\n\nError! Program usage: ./times <graphcase>\nwhere graphcase is one of: worst, average, best\n\n");
-				exit(1);
+				return 1;
 		}
 	}
 
-  exit(0);
+  return 0;
 }

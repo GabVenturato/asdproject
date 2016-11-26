@@ -549,6 +549,6 @@ void print_scc(sccset *SCCset) {
  * because of byte=8bit the result is in byte
  */
 void print_misc_info() {
-	printf("vertex dimension: %dbyte\n", (CHAR_BIT*sizeof(vertex))/8);
-	printf("edge dimension: %dbyte\n", (CHAR_BIT*sizeof(edge))/8);
+	printf("vertex dimension: %lubyte\n", (CHAR_BIT*sizeof(vertex))/8);
+	printf("edge dimension: %lubyte\n", (CHAR_BIT*sizeof(edge))/8);
 }

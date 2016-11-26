@@ -6,7 +6,7 @@
 #include "myprojectlib.h"
 
 /* ---------------------------------- MAIN ---------------------------------- */
-void main(int argc, char **argv) {
+int main(int argc, char **argv) {
 	int nedges;
 
   graph *G = build_graph_from_stdin();
@@ -15,5 +15,5 @@ void main(int argc, char **argv) {
 	BFS(G, root);
 	print_graph_in_stdout(G, root, nedges);
 
-  exit(0);
+  return 0;
 }
