@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>		// to parsing input functions (isalnum)
-#include <limits.h>		// to have the CHAR_BIT const, not essential for project
+#include <ctype.h>      // to parsing input functions (isalnum)
+#include <limits.h>     // to have the CHAR_BIT const, not essential for project
 
 #define MAX_LABEL_LENGTH 1024
 #define DEFAULT_EDGE_COLOR ""
@@ -20,21 +20,21 @@ typedef enum { false, true } bool;
 /* ----------------------------- DATA STRUCTURES ---------------------------- */
 // vertex and edge are used to implement Adjacency List
 typedef struct vertex_T {
-  struct vertex_T *next;	// next vertex in the list
-  struct edge_T *edges;		// pointer to the edges list
-	struct edge_T *tedges;	// pointer to the transposed edges list
+  struct vertex_T *next;  // next vertex in the list
+  struct edge_T *edges;   // pointer to the edges list
+  struct edge_T *tedges;  // pointer to the transposed edges list
 
   char label[MAX_LABEL_LENGTH];
-  int id;									// integer identificator for internal purpose
-	int depth;							// depth of the node (in the tree created later)
-	struct scc_T *sccref;		// reference to the scc which the vertex belongs
+  int id;                 // integer identificator for internal purpose
+  int depth;              // depth of the node (in the tree created later)
+  struct scc_T *sccref;   // reference to the scc which the vertex belongs
 } vertex;
 
 typedef struct edge_T {
   struct vertex_T *connectsTo;
   struct edge_T *next;
-	char color[32];					// to manage the color in output .dot file
-	char style[32];					// to manage the style in output .dot file
+  char color[32];         // to manage the color in output .dot file
+  char style[32];         // to manage the style in output .dot file
 } edge;
 
 typedef struct graph_T {
@@ -43,27 +43,27 @@ typedef struct graph_T {
 
 // SCC management
 typedef struct scc_T {
-	struct vertex_T *root;
-	int id;									// integer identificator for internal purpose
-	bool isreached;					// if SCC is reached
-	struct scc_T *next;
+  struct vertex_T *root;
+  int id;                  // integer identificator for internal purpose
+  bool isreached;          // if SCC is reached
+  struct scc_T *next;
 } scc;
 
 typedef struct sccset_T {
-	struct scc_T *sccomponents;
+  struct scc_T *sccomponents;
 } sccset;
 
 // list of vertices
 typedef struct vlist_T {
-	struct vertex_T *v;			// pointer to a graph vertex
-	struct vlist_T *next;
+  struct vertex_T *v;      // pointer to a graph vertex
+  struct vlist_T *next;
 } vlist;
 
 // vertices queue (used by BFS)
 typedef struct vqueue_T {
-	struct vertex_T *v;
-	struct vqueue_T *next;
-	struct vqueue_T *last;	// keep the pointer to the last, to do push in O(1)
+  struct vertex_T *v;
+  struct vqueue_T *next;
+  struct vqueue_T *last;   // keep the pointer to the last, to do push in O(1)
 } vqueue;
 
 
