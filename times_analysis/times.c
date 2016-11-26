@@ -2,22 +2,22 @@
  * Progetto del laboratorio di ASD anno 2015/2016
  * Programma per lo studio dei tempi.
  * NB: alcuni algoritmi sono stati presi dal pdf degli appunti AA 2015/2016
- * 	per avere una corrispondenza diretta con tali appunti sono stati mantenuti i
- *	nomi italiani degli algoritmi.
+ * per avere una corrispondenza diretta con tali appunti sono stati mantenuti i
+ * nomi italiani degli algoritmi.
  */
 
 #include <time.h>
 #include <math.h>
 #include "../myprojectlib.h"
 
-#define K 0.05	// error tolerance
+#define K 0.05  // error tolerance
 #define INPUT_FILENAME "input.dot"
 
 typedef enum { worst, average, best, wrongcase } graphcase;
 
 /* ----------------------------- DATA STRUCTURES ---------------------------- */
 // gloabl variables
-double seed = 0;	// seed to generate pseudo-random numbers
+double seed = 0; // seed to generate pseudo-random numbers
 
 // to manage return value of function "misurazione"
 typedef struct resrow_T {
@@ -44,7 +44,7 @@ graphcase get_graphcase(char *gc);
 /* @s is a double seed to inizialize the pseudo-random generator
  */
 void myrandom_init(double s) {
-	seed = abs((int)s % 2147483647);
+  seed = abs((int)s % 2147483647);
 }
 
 /* RETURN the next pseudo-random value in interval [0,1]
@@ -52,11 +52,11 @@ void myrandom_init(double s) {
  * Algorithm 8
  */
 double myrandom_next() {
-	double hi,lo,test;
-	int a = 16087,
-			m = 2147483647,
-			q = 127773,
-			r = 2836;
+  double hi,lo,test;
+  int a = 16087,
+      m = 2147483647,
+      q = 127773,
+      r = 2836;
   hi = ceil(seed/q);
   lo = seed-q*hi;
   test = a*lo-r*hi;
@@ -71,8 +71,8 @@ double myrandom_next() {
  * Algorithm 4
  */
 double granularita() {
-  double	t0 = clock(),
-					t1 = clock();
+  double  t0 = clock(),
+          t1 = clock();
   printf("\nt0 %f",t0);
   while( t0==t1 ) {
     t1=clock();
@@ -92,7 +92,7 @@ double tempoMedioNetto(void (*prepara)(int N), int d, double tMin) {
   ripTara = calcolaRipTara(prepara, d, tMin);
   ripLordo = calcolaRipLordo(prepara, d, tMin);
 
-	printf("\nripTara: %d\tripLordo: %d", ripTara, ripLordo);
+  printf("\nripTara: %d\tripLordo: %d", ripTara, ripLordo);
 
   t0 = clock();
   for(int i=0; i<ripTara; i++) (*prepara)(d);
@@ -216,15 +216,15 @@ resrow *misurazione(void (*prepara)(int N), int d, int n, double za, double tMin
  * - it doesn't print out the output graph
  */
 void projectsolver() {
-	int nedges;
-	FILE *fp = fopen(INPUT_FILENAME, "r");
+  int nedges;
+  FILE *fp = fopen(INPUT_FILENAME, "r");
 
   graph *G = build_graph_from_file(fp);
   sccset *SCCset = SCC_finder(G);
-	vertex *root = add_missing_edges(G, &nedges, SCCset);
-	BFS(G, root);
+  vertex *root = add_missing_edges(G, &nedges, SCCset);
+  BFS(G, root);
 
-	fclose(fp);
+  fclose(fp);
 }
 
 /* @n graph dimension (number of vertices)
@@ -248,16 +248,16 @@ void create_graph_worst(int n) {
  * this function generates the average case graph: randomly built graph
  */
 void create_graph_average(int n) {
-	FILE *fp = fopen(INPUT_FILENAME,"w");
+  FILE *fp = fopen(INPUT_FILENAME,"w");
 
   fprintf(fp, "graph G {\n");
   for(int i=0; i<n; i++) {
-		fprintf(fp, "%d;\n", i);
+    fprintf(fp, "%d;\n", i);
     for(int j=0; j<n; j++) {
-			double r = myrandom_next();
-			if( r < 0.5 ) {
-				fprintf(fp, "%d->%d;\n", i, j);
-			}
+      double r = myrandom_next();
+      if( r < 0.5 ) {
+        fprintf(fp, "%d->%d;\n", i, j);
+      }
     }
   }
   fprintf(fp,"}");
@@ -269,7 +269,7 @@ void create_graph_average(int n) {
  * this function generates the best case graph: a graph without edges
  */
 void create_graph_best(int n) {
-	FILE *fp = fopen(INPUT_FILENAME,"w");
+  FILE *fp = fopen(INPUT_FILENAME,"w");
 
   fprintf(fp, "graph G {\n");
   for(int i=0; i<n; i++) {
@@ -288,18 +288,18 @@ void create_graph_best(int n) {
  */
 void times_test(void (*prepara)(int N), char *filename) {
   resrow *r;
-	double g,tMin;
-	int cn=20, maxn=300;
+  double g,tMin;
+  int cn=20, maxn=300;
 
-	myrandom_init(123456789);
+  myrandom_init(123456789);
 
-	g = granularita();
-	tMin = g/K;
-	printf("\nGranularity: %f\ntMin calculated: %f\n", g, tMin);
-	printf("\nTest in input which dimension from 0 to %d\n", maxn);
-	printf("For each step of dimension, perform the test in a set of %d elements.\n", cn);
+  g = granularita();
+  tMin = g/K;
+  printf("\nGranularity: %f\ntMin calculated: %f\n", g, tMin);
+  printf("\nTest in input which dimension from 0 to %d\n", maxn);
+  printf("For each step of dimension, perform the test in a set of %d elements.\n", cn);
 
-	FILE *fp = fopen(filename, "w");
+  FILE *fp = fopen(filename, "w");
 
   for(int i=0; i<=maxn; i++) {
     r = misurazione(prepara, i, cn, 1.96, tMin, 0.02);
@@ -308,7 +308,7 @@ void times_test(void (*prepara)(int N), char *filename) {
     printf("\nN %d/%d\n\tE: %f\tdelta: %f\n", i, maxn, r->e, r->delta);
   }
 
-	printf("\n\nTest completed! Results saved in \"%s\"\n\n", filename);
+  printf("\n\nTest completed! Results saved in \"%s\"\n\n", filename);
 
   fclose(fp);
 }
@@ -318,34 +318,34 @@ void times_test(void (*prepara)(int N), char *filename) {
  * convert it into the equivalent graphcase type
  */
 graphcase get_graphcase(char *gc) {
-	if( strcmp(gc,"worst")==0 ) return worst;
-	else if( strcmp(gc,"average")==0 ) return average;
-	else if( strcmp(gc,"best")==0 ) return best;
-	else return wrongcase;
+  if( strcmp(gc,"worst")==0 ) return worst;
+  else if( strcmp(gc,"average")==0 ) return average;
+  else if( strcmp(gc,"best")==0 ) return best;
+  else return wrongcase;
 }
 
 /* ---------------------------------- MAIN ---------------------------------- */
 int main(int argc, char **argv) {
 
-	if( argc != 2 ) {
-		printf("Error! Program usage: ./times <graphcase>\nwhere graphcase is one of: worst, average, best\n\n");
-		return 1;
-	} else {
-		switch ( get_graphcase(argv[1]) ) {
-			case worst:
-				times_test(create_graph_worst, "worst.txt");
-				break;
-			case average:
-				times_test(create_graph_average, "average.txt");
-				break;
-			case best:
-				times_test(create_graph_best, "best.txt");
-				break;
-			default:
-				printf("\n\nError! Program usage: ./times <graphcase>\nwhere graphcase is one of: worst, average, best\n\n");
-				return 1;
-		}
-	}
+  if( argc != 2 ) {
+    printf("Error! Program usage: ./times <graphcase>\nwhere graphcase is one of: worst, average, best\n\n");
+    return 1;
+  } else {
+    switch ( get_graphcase(argv[1]) ) {
+      case worst:
+        times_test(create_graph_worst, "worst.txt");
+        break;
+      case average:
+        times_test(create_graph_average, "average.txt");
+        break;
+      case best:
+        times_test(create_graph_best, "best.txt");
+        break;
+      default:
+        printf("\n\nError! Program usage: ./times <graphcase>\nwhere graphcase is one of: worst, average, best\n\n");
+        return 1;
+    }
+  }
 
   return 0;
 }
