@@ -39,6 +39,7 @@ void create_graph_average(int n);
 void create_graph_best(int n);
 void times_test(void (*prepara)(int N), char *filename);
 graphcase get_graphcase(char *gc);
+void free_graph_memory(graph *G);
 
 /* -------------------------- FUNCTIONS DEFINITION -------------------------- */
 /* @s is a double seed to inizialize the pseudo-random generator
@@ -92,7 +93,7 @@ double tempoMedioNetto(void (*prepara)(int N), int d, double tMin) {
   ripTara = calcolaRipTara(prepara, d, tMin);
   ripLordo = calcolaRipLordo(prepara, d, tMin);
 
-  printf("\nripTara: %d\tripLordo: %d", ripTara, ripLordo);
+  // printf("\nripTara: %d\tripLordo: %d", ripTara, ripLordo);
 
   t0 = clock();
   for(int i=0; i<ripTara; i++) (*prepara)(d);
@@ -223,6 +224,7 @@ void projectsolver() {
   sccset *SCCset = SCC_finder(G);
   vertex *root = add_missing_edges(G, &nedges, SCCset);
   BFS(G, root);
+  free_graph_memory(G);
 
   fclose(fp);
 }
@@ -233,7 +235,7 @@ void projectsolver() {
 void create_graph_worst(int n) {
   FILE *fp = fopen(INPUT_FILENAME,"w");
 
-  fprintf(fp, "graph G {\n");
+  fprintf(fp, "digraph G {\n");
   for(int i=0; i<n; i++) {
     for(int j=0; j<n; j++) {
       fprintf(fp, "%d->%d;\n", i, j);
@@ -250,7 +252,7 @@ void create_graph_worst(int n) {
 void create_graph_average(int n) {
   FILE *fp = fopen(INPUT_FILENAME,"w");
 
-  fprintf(fp, "graph G {\n");
+  fprintf(fp, "digraph G {\n");
   for(int i=0; i<n; i++) {
     fprintf(fp, "%d;\n", i);
     for(int j=0; j<n; j++) {
@@ -271,7 +273,7 @@ void create_graph_average(int n) {
 void create_graph_best(int n) {
   FILE *fp = fopen(INPUT_FILENAME,"w");
 
-  fprintf(fp, "graph G {\n");
+  fprintf(fp, "digraph G {\n");
   for(int i=0; i<n; i++) {
     fprintf(fp, "%d;\n", i);
   }
@@ -283,13 +285,13 @@ void create_graph_best(int n) {
 /* @prepara pointer to a function which prepare the input of dimension N
  * @tMin minimum execution time needed to maintain the error<=K
  * @filename for the output data
- * this function execute misurazione() from 0 to 300 vertices as input dimension
+ * this function execute misurazione() from 0 to 250 vertices as input dimension
  * passed to prepara() function.
  */
 void times_test(void (*prepara)(int N), char *filename) {
   resrow *r;
   double g,tMin;
-  int cn=20, maxn=300;
+  int cn=20, maxn=250;
 
   myrandom_init(123456789);
 
@@ -322,6 +324,28 @@ graphcase get_graphcase(char *gc) {
   else if( strcmp(gc,"average")==0 ) return average;
   else if( strcmp(gc,"best")==0 ) return best;
   else return wrongcase;
+}
+
+/* @G is a graph
+ * this function aim is to clean the memory occupied by a graph in order to not
+ * full the RAM while doing heavy tests
+ */
+void free_graph_memory(graph *G) {
+  edge *e, *etemp;
+  vertex *v, *vtemp;
+
+  v = G->vertices;
+  while(v!=NULL) {
+    e = v->edges;
+    while(e!=NULL) {
+      etemp = e;
+      e = e->next;
+      free(etemp);
+    }
+    vtemp = v;
+    v = v->next;
+    free(vtemp);
+  }
 }
 
 /* ---------------------------------- MAIN ---------------------------------- */

@@ -93,7 +93,7 @@ void add_element_from_dot_line(char *line, graph *G) {
       v2_found = true;
       v2_label[charcount] = '\0';
     }
-  } while( current!='\n' && current!=';' && !v2_found );
+  } while( current!='\0' && current!='\n' && current!=';' && !v2_found );
 
   // add vertices to the graph
   if( v1_found ) {
@@ -331,8 +331,9 @@ void DFS_SCC_visit(graph *Gt, vertex *u, bool *visited, scc *sccref) {
 sccset *SCC_finder(graph *G) {
   vlist *ftimevertices = DFS(G);
   transpose_graph(G);
-  return DFS_SCC(G, ftimevertices);
+  sccset *s = DFS_SCC(G, ftimevertices);
   vlist_free(ftimevertices);  // clean memory used by ftimevertices list
+  return s;
 }
 
 /* @G is a graph in which scc are already discovered and saved in the specific
@@ -369,12 +370,17 @@ void scc_reachability(graph *G) {
 vertex *add_missing_edges(graph *G, int *nedges, sccset *SCCset) {
   vertex *root=NULL, *v;
   vlist *scc_not_reached=NULL, *li;
+  scc *temp;
 
   scc_reachability(G);      // set reachability flags in graph
 
   // put the scc root vertex in the list if it is not reached
-  for(scc *s=SCCset->sccomponents; s!=NULL; s=s->next) {
+  scc *s=SCCset->sccomponents;
+  while(s!=NULL) {
     if( !s->isreached ) scc_not_reached = vlist_push(scc_not_reached, s->root);
+    temp = s;
+    s = s->next;
+    free(temp);              // free memory used by scc set
   }
 
   li = scc_not_reached;
