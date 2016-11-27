@@ -10,7 +10,11 @@
 #include <math.h>
 #include "../myprojectlib.h"
 
-#define K 0.05  // error tolerance
+#define K 0.05      // error tolerance
+#define CN 20       // sample set dimension
+#define FROM_N 0    // start test from this input dimension
+#define TO_N 150    // test until this input dimension
+#define TEST_STEP 1 // step for input dimension cycle
 #define INPUT_FILENAME "input.dot"
 
 typedef enum { worst, average, best, wrongcase } graphcase;
@@ -285,29 +289,28 @@ void create_graph_best(int n) {
 /* @prepara pointer to a function which prepare the input of dimension N
  * @tMin minimum execution time needed to maintain the error<=K
  * @filename for the output data
- * this function execute misurazione() from 0 to 250 vertices as input dimension
- * passed to prepara() function.
+ * this function execute misurazione() from FROM_N to TO_N vertices as input
+ *  dimension passed to prepara() function.
  */
 void times_test(void (*prepara)(int N), char *filename) {
   resrow *r;
   double g,tMin;
-  int cn=20, maxn=250;
 
   myrandom_init(123456789);
 
   g = granularita();
   tMin = g/K;
   printf("\nGranularity: %f\ntMin calculated: %f\n", g, tMin);
-  printf("\nTest in input which dimension from 0 to %d\n", maxn);
-  printf("For each step of dimension, perform the test in a set of %d elements.\n", cn);
+  printf("\nTest in input which dimension from 0 to %d\n", TO_N);
+  printf("For each step of dimension, perform the test in a set of %d elements.\n", CN);
 
   FILE *fp = fopen(filename, "w");
 
-  for(int i=0; i<=maxn; i++) {
-    r = misurazione(prepara, i, cn, 1.96, tMin, 0.02);
+  for(int i=FROM_N; i<=TO_N; i=i+TEST_STEP) {
+    r = misurazione(prepara, i, CN, 1.96, tMin, 0.02);
     fprintf(fp, "%d %f %f\n", i, r->e, r->delta);
 
-    printf("\nN %d/%d\n\tE: %f\tdelta: %f\n", i, maxn, r->e, r->delta);
+    printf("\nN %d/%d\n\tE: %f\tdelta: %f\n", i, TO_N, r->e, r->delta);
   }
 
   printf("\n\nTest completed! Results saved in \"%s\"\n\n", filename);

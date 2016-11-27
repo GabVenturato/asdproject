@@ -201,11 +201,14 @@ void print_graph_in_stdout(graph *G, vertex *root, int nedges) {
  * in every vertex
  */
 void transpose_graph(graph *G) {
-  for(vertex *v=G->vertices; v!=NULL; v=v->next) {
-    for(edge *e=v->edges; e!=NULL; e=e->next) {
+  vertex *v;
+  edge *e, *newedge;
+
+  for(v=G->vertices; v!=NULL; v=v->next) {
+    for(e=v->edges; e!=NULL; e=e->next) {
       vertex *u = e->connectsTo;
       // create the new edge (u,v) and add it in head of u transposed edges list
-      edge *newedge = (edge *) malloc(sizeof(edge));
+      newedge = (edge *) malloc(sizeof(edge));
       newedge->connectsTo = v;
       newedge->next = u->tedges;
       u->tedges = newedge;
@@ -248,10 +251,11 @@ vlist *DFS(graph *G) {
  * store them in a list that will be used to find SCC of the graph
  */
 vlist *DFS_visit(graph *G, vertex *u, bool *visited, vlist *ftimevertices) {
+  vertex *v;
   visited[u->id] = true;
 
   for(edge *e=u->edges; e!=NULL; e=e->next) {
-    vertex *v = e->connectsTo;
+    v = e->connectsTo;
     if( !visited[v->id] ) {
       ftimevertices = DFS_visit(G, v, visited, ftimevertices);
     }
@@ -272,9 +276,10 @@ vlist *DFS_visit(graph *G, vertex *u, bool *visited, vlist *ftimevertices) {
  */
 sccset *DFS_SCC(graph *Gt, vlist *ftimevertices) {
   bool visited[totvertices];  // keep track of visited vertices (here use id)
+  scc *s;
+  vertex *u;
   sccset *SCCset = (sccset *) malloc(sizeof(sccset));
   SCCset->sccomponents = NULL;
-  vertex *u;
 
   // set all vertices as "not visited"
   for(int i=0; i<totvertices; i++) {
@@ -286,7 +291,7 @@ sccset *DFS_SCC(graph *Gt, vlist *ftimevertices) {
     u = li->v;
     if( !visited[u->id] ) {
       // build the scc with its root vertex
-      scc *s = (scc *) malloc(sizeof(scc));
+      s = (scc *) malloc(sizeof(scc));
       s->root = u;
       s->id = totscc;
       u->sccref = s;          // store in vertex in which scc it is
@@ -312,10 +317,11 @@ sccset *DFS_SCC(graph *Gt, vlist *ftimevertices) {
  * scc that is passed from DFS_SCC main function.
  */
 void DFS_SCC_visit(graph *Gt, vertex *u, bool *visited, scc *sccref) {
+  vertex *v;
   visited[u->id] = true;
 
   for(edge *e=u->tedges; e!=NULL; e=e->next) {
-    vertex *v = e->connectsTo;
+    v = e->connectsTo;
     if( !visited[v->id] ) {
       v->sccref = sccref;  // add vertex to its own scc
       DFS_SCC_visit(Gt, v, visited, sccref);
@@ -344,11 +350,13 @@ sccset *SCC_finder(graph *G) {
  */
 void scc_reachability(graph *G) {
   scc *i, *j;
+  vertex *v, *u;
+  edge *e;
 
-  for(vertex *v=G->vertices; v!=NULL; v=v->next) {
+  for(v=G->vertices; v!=NULL; v=v->next) {
     i = v->sccref;            // retreive the scc in which v is
-    for(edge *e=v->edges; e!=NULL; e=e->next) {
-      vertex *u = e->connectsTo;
+    for(e=v->edges; e!=NULL; e=e->next) {
+      u = e->connectsTo;
       j = u->sccref;          // retreive the scc in which u is
 
       // note that (v,u) is the edge analyzed
@@ -415,6 +423,8 @@ vertex *add_missing_edges(graph *G, int *nedges, sccset *SCCset) {
 void BFS(graph *G, vertex *s) {
   bool visited[totvertices];  // keep track of visited vertices (here use id)
   vqueue *q=NULL;
+  vertex *u, *v;
+  edge *e;
 
   if( s!=NULL ) {             // if the input graph is empty
     // set all vertices as "not visited"
@@ -426,9 +436,9 @@ void BFS(graph *G, vertex *s) {
     s->depth = 0;
     vqueue_push(&q,s);
     while( q!=NULL ) {
-      vertex *u = vqueue_pop(&q);
-      for(edge *e=u->edges; e!=NULL; e=e->next) {
-        vertex *v = e->connectsTo;
+      u = vqueue_pop(&q);
+      for(e=u->edges; e!=NULL; e=e->next) {
+        v = e->connectsTo;
         if( !visited[v->id] ) {
           visited[v->id] = true;
           v->depth = u->depth +1;

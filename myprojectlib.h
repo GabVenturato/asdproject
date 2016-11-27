@@ -11,7 +11,7 @@
 #include <ctype.h>      // to parsing input functions (isalnum)
 #include <limits.h>     // to have the CHAR_BIT const, not essential for project
 
-#define MAX_LABEL_LENGTH 1024
+#define MAX_LABEL_LENGTH 128
 #define DEFAULT_EDGE_COLOR ""
 #define DEFAULT_EDGE_STYLE ""
 
