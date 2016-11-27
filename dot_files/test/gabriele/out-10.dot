@@ -1,7 +1,0 @@
-digraph out {
-b [label="d(a,b)=1"];
-b -> b;
-a [label="root=a; |E'|-|E|=1"];
-a -> b [style=dashed, color=red];
-a -> a;
-}
