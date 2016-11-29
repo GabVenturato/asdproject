@@ -1,0 +1,210 @@
+% Gabriele Venturato (125512)
+% Relazione per il progetto di ASD
+\documentclass[a4paper,8pt]{article}
+\usepackage[T1]{fontenc}    % codifica dei font in uscita
+\usepackage[utf8]{inputenc} % lettere accentate da tastiera
+\usepackage[italian]{babel} % lingua principale del documento
+\usepackage{listings}       % per gestire i pezzi di codice
+\usepackage{amsmath}        % per le notazioni matematiche
+\usepackage{datetime}       % gestione data
+\usepackage{hyperref}       % per gestire i collegamenti e gli url
+
+% ----------------------------- CUSTOMIZATION -------------------------------- %
+% sistema stili data e ora
+\newdateformat{docdate}{\twodigit{1}{} \monthname[12] {2016}}
+\newcommand{\mail}[1]{\href{mailto:#1}{\texttt{#1}}}
+
+% allinea stili lstlisting e verbatim
+\lstset{
+  basicstyle=\small\ttfamily,
+  columns=fullflexible,
+  keepspaces=true,
+  escapeinside={(*@}{@*)}
+}
+
+% nuovo tipo di teorema: Definizione
+\theoremstyle{definition}
+\newtheorem{definizione}{Definizione}
+
+% ----------------------------- DOCUMENT BEGIN ------------------------------- %
+\begin{document}
+
+\author{Gabriele Venturato (125512)\\\mail{venturato.gabriele@spes.uniud.it}}
+\title{Relazione del Progetto di Laboratorio di ASD}{}
+\docdate{}
+\maketitle
+
+\tableofcontents
+\newpage
+
+
+\section{Introduzione}
+\subsection{Assunzioni}
+Per la realizzazione del progetto ho utilizzato il linguaggio C. I test di
+correttezza e per le misurazioni sperimentali sono stati effettuati su un
+laptop \mbox{Lenovo~E540} con CPU Intel Core i5--4210M (3,2 GHz), 12GB di RAM,
+sul sistema operativo Fedora 24 64-bit.
+
+In aggiunta a quando scritto nel documento che descrive il progetto ho ritenuto
+opportuno fare le ulteriori seguenti assunzioni:
+\begin{itemize}
+  \item ogni vertice contiene un'etichetta che corrisponde alla stringa alfanumerica
+    che lo identifica nel formato dot. L'etichetta in questione può avere lunghezza
+    massima di 127 caratteri. Considerando che ci sono 36 caratteri alfanumerici
+    (26 lettere + 10 numeri) mi è sembrato un limite sufficientemente ampio $36^{127}$
+  \item i vertici del grafo vengono numerati per uso interno al programma con un
+    id di tipo \texttt{int}, perciò il numero massimo di vertici è 2.147.483.647
+\end{itemize}
+
+\subsection{Compilare ed Eseguire}
+Per compilare il programma principale (quello che risolve il problema) è sufficiente
+usare il seguente comando dalla root del progetto
+\begin{verbatim}
+  $ gcc -o project project.c myprojectlib.c -I.
+\end{verbatim}
+Se non dovesse funzionare, il comando
+\begin{verbatim}
+  $ gcc -std=gnu99 -o project project.c myprojectlib.c -I.
+\end{verbatim}
+risolve i problemi di compatibilità di versione. Il file eseguibile sarà poi
+\verb!project! e si potrà lanciare con il comando nel formato seguente:
+\begin{verbatim}
+  $ ./project < in.dot > out.dot
+\end{verbatim}
+
+Qualora fosse necessario compilare il sorgente del programma per l'analisi dei
+tempi, eseguire dalla sottocartella \emph{times\_analysis/} il comando:
+\begin{verbatim}
+  $ gcc -o times times.c -lm ../myprojectlib.c
+\end{verbatim}
+allo stesso modo di prima se dovessero presentarsi degli errori, provare con il
+comando con l'opzione \verb!-std=gnu99!. L'eseguibile sarà poi \verb!times!
+e dovrà essere lanciato nel formato:
+\begin{verbatim}
+  $ ./times <graphcase>
+\end{verbatim}
+dove \verb!graphcase! è uno devi valori: worst, average, best. Eventuali dettagli
+aggiuntivi per la personalizzazione dei test si possono trovare nel sorgente, in
+particolare modificando i valori delle costanti globali.
+
+
+\section{Il Problema}
+L'obiettivo di questo progetto è quello di, dato un grafo $G=(V,E)$ in input nel
+formato dot, individuare prima di tutto un \emph{vertice radice}, definito come
+un vertice $v$ dal quale si raggiungono tutti gli altri vertici del grafo.
+Qualora non fosse possibile identificare tale vertice, si deve procedere con
+l'aggiunta del minimo numero di archi necessario a garantire l'esistenza della
+radice. Il grafo $G=(V,E')$ così costruito viene detto che \emph{ammette radice $v$}.
+
+In seconda fase bisogna costruire l'albero $T=(V,E_T)$ dei cammini minimi dalla
+radice precedentemente individuata, calcolando per ogni vertice la profondità in
+cui esso si trova nell'albero.
+
+
+\section{La Soluzione}
+\subsection{Strutture dati}
+Prima di tutto è stato necessario pensare a delle strutture dati per poter gestire
+la computazione in maniera ottimale. Per la memorizzazione del grafo ho scelto di
+utilizzare le liste di adiacenza, e le ho implementate in C con delle struct:
+
+\begin{lstlisting}[language=C]
+  typedef struct vertex_T {
+    struct vertex_T *next;  // next vertex in the list
+    struct edge_T *edges;   // pointer to the edges list
+    struct edge_T *tedges;  // pointer to the transposed edges list
+
+    char label[MAX_LABEL_LENGTH];
+    (*@\ldots@*)
+  } vertex;
+\end{lstlisting}
+
+\begin{lstlisting}[language=C]
+  typedef struct edge_T {
+    struct vertex_T *connectsTo;
+    struct edge_T *next;
+    char color[32];         // to manage the color in output dot file
+    char style[32];         // to manage the style in output dot file
+  } edge;
+\end{lstlisting}
+
+\begin{lstlisting}[language=C]
+  typedef struct graph_T {
+    struct vertex_T *vertices;
+  } graph;
+\end{lstlisting}
+
+\noindent
+La struct di tipo \texttt{graph\_T} serve solamente a livello logico per conservare
+il puntatore alla lista di vertici. La struct di tipo \texttt{vertex\_T} è quella
+che definisce ogni vertice e ne conserva le relative informazioni. Per ogni vertice
+infince esiste una lista di adiacenza, ovvero una lista di archi definita dalla
+struct \texttt{edge\_T} che contiene solamente i puntatori ai vertici a cui il vertice
+proprietario è adiacente.
+
+Ho utilizzato poi altre strutture dati secondare che si possono trovare nel codice,
+in particolare
+\begin{itemize}
+  \item \texttt{sccset}, \texttt{scc} per la gestione delle componenti fortemente
+    connesse
+  \item \texttt{vlist} per la gestione di liste di vertici utili in diversi punti
+    del codice
+  \item \texttt{vqueue} per la gestione della coda di vertici nella visita BFS
+\end{itemize}
+ulteriori dettagli si possono trovare nel sorgente del programma.
+
+\subsection{Algoritmo}
+L'idea di base dell'algoritmo per la soluzione è molto semplice e si suddivide in
+quattro fasi distinte spiegate di seguito.
+
+\subsubsection{Acquisizione dell'input}
+Le funzioni per il parsing dell'input prendono lo streaming di dati da \texttt{stdin}
+e analizzano ogni riga, carattere per carattere, alla ricerca dei nomi dei vertici.
+Per ogni riga si possono trovare al più due vertici. Se ne viene trovato solo uno
+lo si aggiunge e si passa alla riga successiva. Se ne vengono trovati due può essere
+solamente dovuto al fatto che nella riga si esprime l'adiacenza tra due nodi. Per
+questo motivo vengono aggiunti entrambi, e in seguito viene aggiunto l'arco che li
+collega. L'arco viene aggiunto in testa alla lista per non peggiorare la complessità.
+
+Il costo computazionele di questa procedura è quello che peggiora il costo di tutta
+la soluzione proposta, e il motivo principale è dovuto alla necessità di dover
+controllare che i vertici in input non siano già stati inseriti. In questo modo
+per ogni riga di input si scorre una lista di $O(V)$ elementi (si veda la
+sezione~\ref{subsec:complessita}).
+
+\subsubsection{Componenti fortemente connesse (SCC)}
+Nella prima fase di processo dei dati ricevuti in input vengono individuate le
+\emph{Componenti Fortemente Connesse (SCC)} del grafo, e vengono inserite nella
+struttura dati apposita.
+
+% algo in pseudocodice
+
+Quello che si ottiene alla fine è un insieme di componenti fortemente connesse.
+Ogni elemento base della struttura dati che le gestisce contiene un puntatore al
+vertice radice rappresentante della componente. Per garantire efficienza e una buona
+complessità ogni vertice punta alla SCC a cui appartiene (compreso il rappresentante).
+In questo modo in tempo $O(1)$ si riesce a risalire a quale componente un vertice $v$
+appartiene. L'insieme di SCC restituire da questa procedura viene dato in input
+alla fase successiva dell'algoritmo.
+
+\subsubsection{Archi mancanti}
+Questo è il cuore dell'algoritmo in cui si individua la \emph{radice del grafo}
+e si aggiungono gli eventuali archi mancanti. Il processo inizia con una chiamata
+a una sottoprocedura che si occupa di controllare la \emph{raggiungibilità} delle
+varie componenti fortemente connesse.
+
+\begin{definizione}[di raggiungibilità] Definiamo come \emph{raggiunta} una
+  componente fortemente connessa $S$ di un grafo $G=(V,E)$ se e solo se
+  $\exists{v}\notin{S}$ tale che per qualche vertice $u\in{S}$, $\exists(v,u)$.
+\end{definizione}
+
+\subsubsection{Albero dei cammini minimi}
+\subsection{Correttezza}
+\subsection{Complessità}
+\label{subsec:complessita}
+
+
+\section{Misurazioni sperimentali}
+
+\section{Conclusioni e osservazioni personali}
+
+\end{document}
