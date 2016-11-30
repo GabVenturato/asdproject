@@ -1,17 +1,17 @@
 \select@language {italian}
 \select@language {italian}
-\contentsline {section}{\numberline {1}Introduzione}{3}{section.1}
-\contentsline {subsection}{\numberline {1.1}Assunzioni}{3}{subsection.1.1}
-\contentsline {subsection}{\numberline {1.2}Compilare ed Eseguire}{3}{subsection.1.2}
-\contentsline {section}{\numberline {2}Il Problema}{4}{section.2}
-\contentsline {section}{\numberline {3}La Soluzione}{4}{section.3}
-\contentsline {subsection}{\numberline {3.1}Strutture dati}{4}{subsection.3.1}
-\contentsline {subsection}{\numberline {3.2}Algoritmo}{5}{subsection.3.2}
-\contentsline {subsubsection}{\numberline {3.2.1}Acquisizione dell'input}{5}{subsubsection.3.2.1}
-\contentsline {subsubsection}{\numberline {3.2.2}Componenti fortemente connesse (SCC)}{5}{subsubsection.3.2.2}
-\contentsline {subsubsection}{\numberline {3.2.3}Archi mancanti}{5}{subsubsection.3.2.3}
-\contentsline {subsubsection}{\numberline {3.2.4}Albero dei cammini minimi}{6}{subsubsection.3.2.4}
-\contentsline {subsection}{\numberline {3.3}Correttezza}{6}{subsection.3.3}
+\contentsline {section}{\numberline {1}Introduzione}{2}{section.1}
+\contentsline {subsection}{\numberline {1.1}Assunzioni}{2}{subsection.1.1}
+\contentsline {subsection}{\numberline {1.2}Compilare ed Eseguire}{2}{subsection.1.2}
+\contentsline {section}{\numberline {2}Il Problema}{2}{section.2}
+\contentsline {section}{\numberline {3}La Soluzione}{3}{section.3}
+\contentsline {subsection}{\numberline {3.1}Strutture dati}{3}{subsection.3.1}
+\contentsline {subsection}{\numberline {3.2}Algoritmo}{4}{subsection.3.2}
+\contentsline {subsubsection}{\numberline {3.2.1}Acquisizione dell'input}{4}{subsubsection.3.2.1}
+\contentsline {subsubsection}{\numberline {3.2.2}Componenti fortemente connesse (SCC)}{4}{subsubsection.3.2.2}
+\contentsline {subsubsection}{\numberline {3.2.3}Archi mancanti}{4}{subsubsection.3.2.3}
+\contentsline {subsubsection}{\numberline {3.2.4}Albero dei cammini minimi}{5}{subsubsection.3.2.4}
+\contentsline {subsection}{\numberline {3.3}Correttezza}{5}{subsection.3.3}
 \contentsline {subsection}{\numberline {3.4}Complessit\IeC {\`a}}{6}{subsection.3.4}
-\contentsline {section}{\numberline {4}Misurazioni sperimentali}{6}{section.4}
-\contentsline {section}{\numberline {5}Conclusioni e osservazioni personali}{6}{section.5}
+\contentsline {section}{\numberline {4}Misurazioni sperimentali}{7}{section.4}
+\contentsline {section}{\numberline {5}Conclusioni e osservazioni personali}{9}{section.5}

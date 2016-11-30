@@ -1,13 +1,17 @@
 % Gabriele Venturato (125512)
 % Relazione per il progetto di ASD
 \documentclass[a4paper,8pt]{article}
-\usepackage[T1]{fontenc}    % codifica dei font in uscita
-\usepackage[utf8]{inputenc} % lettere accentate da tastiera
-\usepackage[italian]{babel} % lingua principale del documento
-\usepackage{listings}       % per gestire i pezzi di codice
-\usepackage{amsmath}        % per le notazioni matematiche
-\usepackage{datetime}       % gestione data
-\usepackage{hyperref}       % per gestire i collegamenti e gli url
+\usepackage[T1]{fontenc}            % codifica dei font in uscita
+\usepackage[utf8]{inputenc}         % lettere accentate da tastiera
+\usepackage[italian]{babel}         % lingua principale del documento
+\usepackage{listings}               % per gestire i pezzi di codice
+\usepackage{amsmath}                % per le notazioni matematiche
+\usepackage{amsthm}                 % per il nuovo tipo di teorema
+\usepackage{datetime}               % gestione data
+\usepackage{pgfplots}               % per disegnare i grafici
+\usepackage[ruled]{algorithm}       % contenitore per algoritmi (da lo stile)
+\usepackage[noend]{algpseudocode}   % per gestire gli algoritmi in pseudocosice
+\usepackage{hyperref}               % per gestire i collegamenti e gli url
 
 % ----------------------------- CUSTOMIZATION -------------------------------- %
 % sistema stili data e ora
@@ -25,6 +29,23 @@
 % nuovo tipo di teorema: Definizione
 \theoremstyle{definition}
 \newtheorem{definizione}{Definizione}
+\theoremstyle{remark}
+\newtheorem{osservazione}{Osservazione}
+
+% impostazione hyperref: nasconti rettangoli rossi e colori dei link
+\hypersetup{hidelinks}
+
+% impostazioni grafici
+\pgfplotsset{compat=newest}
+
+% traduci algorithm caption in italiano
+\makeatletter
+\renewcommand{\ALG@name}{Algoritmo}
+\makeatother
+
+% definisco foreach nel pseudocodice
+\algnewcommand\algorithmicforeach{\textbf{for each}}
+\algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1\ \algorithmicdo}
 
 % ----------------------------- DOCUMENT BEGIN ------------------------------- %
 \begin{document}
@@ -46,12 +67,11 @@ laptop \mbox{Lenovo~E540} con CPU Intel Core i5--4210M (3,2 GHz), 12GB di RAM,
 sul sistema operativo Fedora 24 64-bit.
 
 In aggiunta a quando scritto nel documento che descrive il progetto ho ritenuto
-opportuno fare le ulteriori seguenti assunzioni:
+opportuno fare le seguenti ulteriori assunzioni:
 \begin{itemize}
   \item ogni vertice contiene un'etichetta che corrisponde alla stringa alfanumerica
     che lo identifica nel formato dot. L'etichetta in questione può avere lunghezza
-    massima di 127 caratteri. Considerando che ci sono 36 caratteri alfanumerici
-    (26 lettere + 10 numeri) mi è sembrato un limite sufficientemente ampio $36^{127}$
+    massima di 127 caratteri
   \item i vertici del grafo vengono numerati per uso interno al programma con un
     id di tipo \texttt{int}, perciò il numero massimo di vertici è 2.147.483.647
 \end{itemize}
@@ -89,9 +109,9 @@ particolare modificando i valori delle costanti globali.
 
 
 \section{Il Problema}
-L'obiettivo di questo progetto è quello di, dato un grafo $G=(V,E)$ in input nel
-formato dot, individuare prima di tutto un \emph{vertice radice}, definito come
-un vertice $v$ dal quale si raggiungono tutti gli altri vertici del grafo.
+L'obiettivo di questo progetto è quello di, dato un \emph{grafo orientato} $G=(V,E)$
+in input nel formato dot, individuare prima di tutto un \emph{vertice radice},
+definito come un vertice $v$ dal quale si raggiungono tutti gli altri vertici del grafo.
 Qualora non fosse possibile identificare tale vertice, si deve procedere con
 l'aggiunta del minimo numero di archi necessario a garantire l'esistenza della
 radice. Il grafo $G=(V,E')$ così costruito viene detto che \emph{ammette radice $v$}.
@@ -137,11 +157,11 @@ utilizzare le liste di adiacenza, e le ho implementate in C con delle struct:
 La struct di tipo \texttt{graph\_T} serve solamente a livello logico per conservare
 il puntatore alla lista di vertici. La struct di tipo \texttt{vertex\_T} è quella
 che definisce ogni vertice e ne conserva le relative informazioni. Per ogni vertice
-infince esiste una lista di adiacenza, ovvero una lista di archi definita dalla
+infine esiste una lista di adiacenza, ovvero una lista di archi definita dalla
 struct \texttt{edge\_T} che contiene solamente i puntatori ai vertici a cui il vertice
 proprietario è adiacente.
 
-Ho utilizzato poi altre strutture dati secondare che si possono trovare nel codice,
+Ho utilizzato poi altre strutture dati secondarie che si possono trovare nel codice,
 in particolare
 \begin{itemize}
   \item \texttt{sccset}, \texttt{scc} per la gestione delle componenti fortemente
@@ -152,23 +172,30 @@ in particolare
 \end{itemize}
 ulteriori dettagli si possono trovare nel sorgente del programma.
 
+Ogni struttura dati tiene conto dell'allocazione di memoria e della sua deallocazine,
+per mantenerne un utilizzo minimo. Solamente la struttura dati del grafo non viene
+deallocata nel programma principale perchè viene utilizzata fino alla fine, però
+ho fatto dei miglioramenti in merito nel programma delle misurazioni sperimentali
+(si veda la sezione~\ref{sec:misurazioni}).
+
 \subsection{Algoritmo}
 L'idea di base dell'algoritmo per la soluzione è molto semplice e si suddivide in
 quattro fasi distinte spiegate di seguito.
 
 \subsubsection{Acquisizione dell'input}
+\label{subsec:input}
 Le funzioni per il parsing dell'input prendono lo streaming di dati da \texttt{stdin}
 e analizzano ogni riga, carattere per carattere, alla ricerca dei nomi dei vertici.
 Per ogni riga si possono trovare al più due vertici. Se ne viene trovato solo uno
 lo si aggiunge e si passa alla riga successiva. Se ne vengono trovati due può essere
-solamente dovuto al fatto che nella riga si esprime l'adiacenza tra due nodi. Per
+solamente dovuto al fatto che nella riga si esprime l'adiacenza tra due vertici. Per
 questo motivo vengono aggiunti entrambi, e in seguito viene aggiunto l'arco che li
 collega. L'arco viene aggiunto in testa alla lista per non peggiorare la complessità.
 
 Il costo computazionele di questa procedura è quello che peggiora il costo di tutta
 la soluzione proposta, e il motivo principale è dovuto alla necessità di dover
 controllare che i vertici in input non siano già stati inseriti. In questo modo
-per ogni riga di input si scorre una lista di $O(V)$ elementi (si veda la
+per ogni riga di input si scorre una lista di $O(|V|)$ elementi (si veda la
 sezione~\ref{subsec:complessita}).
 
 \subsubsection{Componenti fortemente connesse (SCC)}
@@ -176,14 +203,25 @@ Nella prima fase di processo dei dati ricevuti in input vengono individuate le
 \emph{Componenti Fortemente Connesse (SCC)} del grafo, e vengono inserite nella
 struttura dati apposita.
 
-% algo in pseudocodice
+\begin{algorithm}
+\caption{Componenti Fortemente Connesse}
+\label{alg:scc}
+\begin{algorithmic}[1] % The number tells where the line numbering should start
+  \Procedure{SccFinder}{$G$}
+    \State\ $\textsc{Dfs}(G)$ \Comment{calcola i il tempo di fine per ognu vertice $u$}
+    \State\ $G^T \gets \textsc{TransposeGraph}(G)$
+    \State\ $s \gets \textsc{DfsScc}(G^T)$ \Comment{considerando i vertici in ordine di fine visita}
+    \State\ \textbf{return} $s$ \Comment{ritorna l'insieme delle scc}
+  \EndProcedure\
+\end{algorithmic}
+\end{algorithm}
 
 Quello che si ottiene alla fine è un insieme di componenti fortemente connesse.
 Ogni elemento base della struttura dati che le gestisce contiene un puntatore al
 vertice radice rappresentante della componente. Per garantire efficienza e una buona
 complessità ogni vertice punta alla SCC a cui appartiene (compreso il rappresentante).
-In questo modo in tempo $O(1)$ si riesce a risalire a quale componente un vertice $v$
-appartiene. L'insieme di SCC restituire da questa procedura viene dato in input
+In questo modo in tempo $\Theta(1)$ si riesce a risalire a quale componente un vertice $v$
+appartiene. L'insieme di SCC restituite da questa procedura viene dato in input
 alla fase successiva dell'algoritmo.
 
 \subsubsection{Archi mancanti}
@@ -192,19 +230,258 @@ e si aggiungono gli eventuali archi mancanti. Il processo inizia con una chiamat
 a una sottoprocedura che si occupa di controllare la \emph{raggiungibilità} delle
 varie componenti fortemente connesse.
 
-\begin{definizione}[di raggiungibilità] Definiamo come \emph{raggiunta} una
-  componente fortemente connessa $S$ di un grafo $G=(V,E)$ se e solo se
-  $\exists{v}\notin{S}$ tale che per qualche vertice $u\in{S}$, $\exists(v,u)$.
+\begin{definizione}[Raggiungibilità di una SCC] Definiamo come \emph{raggiunta} una
+  componente fortemente connessa $S$, di un grafo $G=(V,E)$, se e solo se
+  $\exists{v}\notin{S}$ tale che per qualche vertice $u\in{S}$ esiste $(v,u)\in{E}$.
 \end{definizione}
 
+Quello che fa nella pratica la procedura \verb!scc_reachability()! è andare ad
+impostare il booleano \texttt{isreached} nella struttura dati per la gesione delle
+componenti. Di default alla creazione viene impostato a $false$, viene quindi
+eseguita la procedura di verifica che in $\Theta(|V|)$ aggiorna a $true$ le
+componenti raggiunte.
+
+\begin{algorithm}
+\caption{Raggiungibilità SCC}
+\label{alg:sccreachability}
+\begin{algorithmic}[1] % The number tells where the line numbering should start
+  \Procedure{SccReachability}{$G$}
+    \ForEach{$v \in G.V$}
+      \State\ $i \gets scc[v]$  \Comment{recupero la SCC di v}
+      \ForEach{$u \in Adj[v]$}
+        \State\ $j \gets scc[u]$  \Comment{recupero la SCC di u}
+        \If{$ i \neq j$}  \Comment{esiste l'arco $(v,u)$, non è la stessa SCC}
+          \State\ $j.reached \gets\ true$ \Comment{la identifico come raggiunta}
+        \EndIf\
+      \EndFor\
+    \EndFor\
+  \EndProcedure\
+\end{algorithmic}
+\end{algorithm}
+
+Una volta eseguita questa prima fase, vengono poi effettivamente aggiunti gli archi
+mancanti nel grafo (di colore rosso, come specificato nel pdf del progetto) in questo
+modo: la prima componente non raggiunta viene eletta a \emph{root}, e viene collegata
+a tutte le altre non raggiunte attraverso i rappresentanti delle componenti.
+
+\begin{algorithm}
+\caption{Aggiunta archi mancanti}
+\label{alg:addmissingegdes}
+\begin{algorithmic}[1] % The number tells where the line numbering should start
+  \Procedure{AddMissingEdges}{$G$}
+    \State\ $SccNotReached \gets \textsc{SccReachability}(G)$ \Comment{lista di comopnenti}
+    \State\ $root \gets pop(SccNotReached)$ \Comment{prendo la prima scc come radice}
+    \ForEach{$scc \in SccNotReached$}
+      \State\ $v \gets scc.vertex$  \Comment{recupero il rappresentante della SCC}
+      \State\ $\textsc{AddEdge}(root, v, G)$ \Comment{aggiungo l'arco $(root,v)$ a $G$}
+    \EndFor\
+  \EndProcedure\
+\end{algorithmic}
+\end{algorithm}
+
 \subsubsection{Albero dei cammini minimi}
+La procedura per la costruzione dell'albero dei cammini minimi è di fatto una
+\emph{BFS visit} inizializzata dal vertice $root$, che per quanto già definito, necessariamente
+raggiungerà tutti i vertici del grafo. La BFS sfrutta la struttura dati di tipo \emph{queue}
+che inserisce in coda e toglie dalla testa. Per mantenere una complessità di $\Theta(1)$
+per le operazioni di \texttt{push} e \texttt{pop} ho sfruttato i puntatori forniti dal
+linguaggio mantenendone uno che punta all'inizio e un altro alla fine.
+
+La costruzione dell'albero viene effettuata solamente cambiando lo stile degli archi
+da quello di default a \textit{``dashed''} (come richiesto nel documento del progetto).
+Oltre a costruire l'albero, viene anche calcolata la profondità di ogni vertice.
+Questo esaurisce la soluzione al problema in ogni suo aspetto.
+
 \subsection{Correttezza}
+La correttezza di quasi tutte le procedure utilizzate è già affrontata dettagliatamente
+nel libro di testo, ed è stata vista anche a lezione durante l'anno. L'implementazione
+degli algoritmi nel mio programma si discosta dalla definizione del libro solo per
+dettagli che non influenzano quanto già dimostrato. In particolare:
+
+\begin{itemize}
+  \item \emph{DFS} nelle sue due varianti \texttt{DFS} e \texttt{DFS\_SCC} hanno
+    delle differenze puramente implementative
+  \item \emph{BFS} garantisce la costruzione dell'albero dei cammini minimi con
+    la giusta profondità assegnata ai vertici per costruzione dell'algoritmo.
+\end{itemize}
+
+Resta da dimostrare quindi solo che la procedura \verb!add_missing_edges()! ritorni
+effettivamente un grafo che \emph{ammette una radice}, al più aggiungendo il \emph{minimo}
+numero di archi.
+
+Per dimostrarlo assumo noto il concetto di \emph{componenti fortemente connesse}
+e verifico prima di tutto la correttezza di \verb!scc_reachability()! che viene
+richiamata nella prima fase.
+
+I passi eseguiti sono semplici (si veda l'Algoritmo~\ref{alg:sccreachability}): per ogni vertice
+$v$ si scorre la sua lista di adiacenza, e per ogni $u\in{Adj[v]}$ si verifica (in tempo $\Theta(1)$)
+a quale SCC essi appartengono. Se $scc[v] \neq scc[u]$ significa che la componente di $u$ è
+raggiunta dalla componente di $v$, e quindi si aggiorna lo stato di questa a
+\emph{``raggiunta''}. Questo viene fatto per ogni vertice del grafo, e quindi è immediato
+che ogni componente raggiunta venga segnalata come tale.
+
+\bigskip
+A questo punto lo scopo è trovare un vertice dal quale raggiungo tutti gli altri.
+Si osservi che in una SCC ogni vertice raggiunge tutti gli altri. Le componenti
+\emph{raggiunte} non vengono prese in considerazione perchè se sono già raggiungibili
+da un'altra componente, allora non sono le candidate ideali per garantire l'eventuale
+aggiunta del minimo numero di archi.
+
+Considero allora solamente le componenti non raggiunte e osservo che esiste sempre
+almeno una SCC in un grafo che è il grafo stesso, e questa è banalmente non raggiunta
+da nessun'altra.
+
+A questo punto: se è solo una, scelgo il suo rappresentate come radice
+del grafo e ho finito senza dover aggiungere archi. Se invece c'è più di una componente
+non raggiunta, ne scelgo \emph{indifferentemente} una e uso il suo rappresentante
+come radice del grafo. Utilizzo poi questo vertice $root$ per aggiungere tutti gli
+archi tra $root$ e i rappresentanti delle componenti non raggiunte.
+
+In questo modo ho esaurito tutti i casi e alla fine della procedura avrò un vertice
+$root$ dal quale raggiungo tutti gli altri vertici del grafo.
+
+\begin{osservazione}[Il numero di archi aggiunti è minimo]
+  \'E immediato dalla correttezza di \verb!scc_reachability()! che se ci sono $n$
+  componenti non raggiunte (compresa quella di cui è rappresentante la radice),
+  il minimo numero di archi da aggiungere per raggiungerle tutte da $root$ è esattamente
+  $n-1$. In caso contrario qualche componente rimarrebbe isolata.
+\end{osservazione}
+
+\begin{osservazione}
+  In generale la soluzione al problema non è unica. Sia per l'arbitrarietà della
+  scelta della componente il cui rappresentante sarà la radice del grafo, sia perchè
+  ogni vertice in una SCC è mutualmente raggiungibile e ciò implica che ogni vertice
+  della componente di cui $root$ è il rappresentante può essere a sua volta radice
+  del grafo.
+\end{osservazione}
+
 \subsection{Complessità}
 \label{subsec:complessita}
+La soluzione proposta è sostanzialmente divisa in tre parti:
 
+\medskip
+\verb!SCC_finder()! è composta di due DFS con costo $\Theta(|V|+|E|)$, e una
+funzione \verb!transpose_graph()! con lo stesso costo.
+
+\smallskip
+\verb!add_missing_edges()! ha costo $\Theta(|V|+|E|)$ perchè nonostante operi
+in tempo $O(|V|)$, richiama al suo interno la procedura \verb!scc_reachability()!
+la cui complessità ne determina quella effettiva.
+
+\smallskip
+\verb!BFS()! la cui complessità in generale è $O(|V|+|E|)$, nel contesto di
+utilizzo della soluzione proposta visita necessariamente tutto il grafo, è quindi
+più precisamente $\Theta(|V|+|E|)$.
+
+\medskip
+Ha quindi una complessità lineare sulla dimensione del grafo $\Theta(|V|+|E|)$,
+che nel caso peggiore di un grafo completo corrisponde a $\Theta(|V|^{2})$.
+
+Però, come anticipato nella sezione~\ref{subsec:input}, c'è la procedura di acquisizione
+dell'input che aggrava la complessità totale perchè per ogni riga di input si deve
+controllare se un vertice è stato già insterito in una lista di lunghezza $O(|V|)$.
+Considerando che per descrivere il grafo si utilizzano $O(|V|+|E|)$ righe, il costo
+finale è $O(|V|(|V|+|E|)) = O(|V|^{2}+|V||E|)$.
+
+Questo vuol dire che anche nel caso migliore
+in cui il grafo $G=(V,E)$ di input ha $E=\emptyset$, la complessità totale è comunque
+\emph{quadratica}. Nel caso peggiore invece, in cui il grafo è completo si ha $|E|=|V|^{2}$,
+perciò il costo è \emph{cubico}.
 
 \section{Misurazioni sperimentali}
+\label{sec:misurazioni}
+Le misurazioni sono state eseguite con gli algoritmi descritti nel pdf degli appunti
+del laboratorio di ASD\@. In particolare si è fatto uso della procedura \verb!misurazione()!
+con una tolleranza dell'errore imposta al 5\%, campioni di 20 elementi, e un intervallo
+di confidenza del 95\%. Le ripetizioni dell'algoritmo sono state effettuate su input
+da dimensione $0$ fino a un massimo di $150$ vertici.
+
+La ragione di tale limite è stata imposta dai limiti hardware della macchina su
+cui ho eseguito i test.
+
+Nella versione del programma in cui sono stati eseguiti i test sui tempi ho provveduto
+all'implementazione di una procedura che dealloca la memoria utilizzata da ogni grafo,
+nei limiti del linguaggio (e delle mie conoscenze relative ad esso). Nonostante
+questi accorgimenti, andando oltre i 150 vertici la memoria occupata era quasi di 10GB, e
+per evitare che iniziasse lo \textit{swapping} in memoria secondaria ho preferito
+imporre questo limite. Le misure rilevate mi sono sembrate ad ogni modo sufficienti
+per fare le dovute considerazioni.
+
+\bigskip\noindent
+Per la generazione degli input ho distinto in casi:
+
+\begin{itemize}
+  \item per il caso \emph{ottimo} ho scelto un grafo senza archi perchè è il caso
+    in cui l'esecuzione dell'algoritmo è più veloce
+  \item per il caso \emph{medio} ho utlizzato l'algoritmo per la generazione di numeri pseudo-casuali
+    proposto a lezione
+  \item per il caso \emph{pessimo} invece, ho generato un grafo completo
+\end{itemize}
+
+A conferma dell'analisi analitica della complessità, si può vedere in Figura~\ref{fig:ottimo}
+che il caso ottimo è comunque quadratico, nonostante le procedure ``cuore'' della
+soluzione non lo siano. Tale andamento è giustificato dal modo in cui è stato effettuato
+il parsing del grafo in input.
+
+\bigskip
+In Figura~\ref{fig:confronto} invece si può apprezzare la differenza nell'andamento
+dei tre casi: il caso pessimo è di ordine cubico, il caso ottimo viene riportato
+dal caso precedente in proporzione, e il caso medio si colloca esattamente tra i due.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis} [xmin=0,xmax=160,
+                  ymin=0,ymax=0.0002,
+                  grid=major,
+                  xlabel=$Numero\ di\ vertici$,ylabel=$Secondi$,
+                  height=0.8\textwidth,width=1\textwidth]
+      	\addplot[thin,darkgray] file{bestcase_dataset.txt};
+        \addplot[line width=1.2pt,green,domain=0:150,opacity=0.8]%
+          {3.87940645085889*10^(-9)*x^2 + 2.49430963357573*10^(-7)*x + 4.42524620862636*10^(-5)};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Misurazione nel caso ottimo}
+\label{fig:ottimo}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis} [xmin=0,xmax=160,
+                  ymin=0,ymax=0.025,
+                  grid=major,
+                  xlabel=$Numero\ di\ vertici$,ylabel=$Secondi$,
+                  height=0.8\textwidth,width=1\textwidth,
+                  legend style={anchor=north,at={(0.18,0.97)}}]
+      	\addplot[thin,darkgray] file{bestcase_dataset.txt};
+        \addplot[thin,darkgray] file{averagecase_dataset.txt};
+        \addplot[thin,darkgray] file{worstcase_dataset.txt};
+        \addplot[semithick,green,domain=0:150,opacity=0.8]% caso ottimo
+          {3.87940645085889*10^(-9)*x^2 + 2.49430963357573*10^(-7)*x + 4.42524620862636*10^(-5)};
+        \addplot[semithick,cyan,domain=0:150,opacity=0.8]% caso medio
+          {0.000000003*x^3 + 0.000000021*x^2 + 4.06092120079765*10^(-6)*x + 0.000023057};
+        \addplot[semithick,red,domain=0:150,opacity=0.8]% caso pessimo
+          {6.05426000695029*10^(-9)*x^3 - 7.92856600441067*10^(-8)*x^2 + 1.40744249938596*10^(-5)*x - 7.74599390248747*10^(-5)};
+        \legend{,,,$Caso\ ottimo$, $Caso\ medio$, $Caso\ pessimo$}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Confronto delle misurazioni nei tre casi}
+\label{fig:confronto}
+\end{figure}
 
 \section{Conclusioni e osservazioni personali}
+Per lo sviluppo di questo progetto ho cercato di applicare al meglio le mie conoscenze
+relative al linguaggio C utilizzato, ma soprattutto le nozioni apprese durante il
+corso di Algoritmi e Strutture Dati. \'E stato utile e interessante applicare gli
+algoritmi studiati teoricamente, e verificarne sperimentalmente i risultati sia in
+termini di correttezza che di tempi effettivi di esecuzione.
+
+Le principali difficoltà sono state all'inizio, nella strutturazione di una soluzione
+semplice ma che tenesse conto dell'efficienza. Ma anche nella scelta delle strutture
+dati più opportune e nella loro ottimizzazione, cercando di sfruttare le potenzialità
+del linguaggio, che offre una gestione diretta della memoria attraverso puntatori.
+Ulteriori osservazioni di minore importanza, in merito ad eventuali perfezionamenti,
+si possono trovare nel sorgente del programma tra i commenti dedicati ad ogni procedura.
 
 \end{document}
